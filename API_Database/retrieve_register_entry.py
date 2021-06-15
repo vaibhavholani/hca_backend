@@ -53,7 +53,7 @@ def get_pending_bill_numbers(supplier_id: int, party_id: int) -> List[int]:
     # Open a new connection
     db, cursor = db_connector.cursor(True)
 
-    query = "select bill_number from register_entry where supplier_id = '{}' AND party_id = '{}' AND status != '{}'".\
+    query = "select id, bill_number, status, floor(partial_amount) as partial_amount, floor(amount) as amount, gr_amount, deduction from register_entry where supplier_id = '{}' AND party_id = '{}' AND status != '{}'".\
         format(supplier_id, party_id, "F")
     cursor.execute(query)
     data = cursor.fetchall()
