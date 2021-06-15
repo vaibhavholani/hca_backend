@@ -25,5 +25,5 @@ def update_memo_entry_data(entry: MemoEntry) -> None:
     cursor.execute(query)
     db_connector.add_stack(query)
     db.commit()
-    db.disconnect()
+    db.close()
     db_connector.update()

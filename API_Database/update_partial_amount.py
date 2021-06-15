@@ -19,7 +19,7 @@ def add_partial_amount(supplier_id: int, party_id: int, amount: int) -> None:
 
     cursor.execute(query)
     db.commit()
-    db.disconnect()
+    db.close()
     db_connector.update()
 
 
@@ -41,5 +41,5 @@ def use_partial_amount(supplier_id: int, party_id: int, amount: int) -> None:
     cursor.execute(query)
     db_connector.add_stack(query)
     db.commit()
-    db.disconnect()
+    db.close()
     db_connector.update()
