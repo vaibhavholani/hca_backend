@@ -69,8 +69,9 @@ def add_memo_entry(object: str):
 
 @app.route('/add_legacy')
 def add_legacy():
-    add_party.add()
     add_suppliers.add()
+    add_party.add()
+    
     return {"status": "okay"}
     
 
