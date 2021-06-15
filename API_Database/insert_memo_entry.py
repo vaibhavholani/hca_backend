@@ -1,6 +1,6 @@
 from __future__ import annotations
 from psql import db_connector
-from API_Database import retrieve_indivijual, retrieve_memo_entry
+from API_Database import retrieve_memo_entry
 from Entities import MemoEntry, MemoBill
 
 
@@ -38,7 +38,7 @@ def insert_memo_payemts(entry: MemoEntry) -> None:
 
     memo_id = retrieve_memo_entry.get_id_by_memo_number(entry.memo_number, entry.supplier_id, entry.party_id)
 
-    payment_list = [(memo_id, retrieve_indivijual.get_bank_id_by_name(e[0]), int(e[1])) for e in entry.payment_info]
+    payment_list = [(memo_id, int(e[0]), int(e[1])) for e in entry.payment_info]
 
     sql = "INSERT INTO memo_payments (memo_id, bank_id, cheque_number) " \
           "VALUES (%s, %s, %s)"
@@ -61,7 +61,7 @@ def insert_memo_bills(entry: MemoBill) -> None:
 
     sql = "INSERT INTO memo_bills (memo_id, bill_number, type, amount) " \
           "VALUES (%s, %s, %s, %s)"
-    val = (entry.memo_id, entry.memo_number, entry.type, entry.amount)
+    val = (entry.memo_id, entry.bill_number, entry.type, entry.amount)
 
     cursor.execute(sql, val)
     db_connector.add_stack_val(sql, val)
