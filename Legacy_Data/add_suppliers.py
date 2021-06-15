@@ -1,7 +1,7 @@
 import sys
 sys.path.append("../")
 from Indivijuval import Supplier
-from Database import insert_individual
+from API_Database import insert_individual
 
 supplier_data = """S	SHREE KUNJ BIHARI SAREES	SHREE K,B,	0
 S	RAGHUPATI SAREES	RAGHUPATI	1
