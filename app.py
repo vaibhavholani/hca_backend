@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_file
 import json
 import sys
 sys.path.append("../")
@@ -53,7 +53,8 @@ def create_report():
         report = data['report']
         start = data['from']
         end = data['to']
-        report_select.make_report(report, supplier_id, party_id, start, end)
+        pdf = report_select.make_report(report, supplier_id, party_id, start, end)
+        return send_file(pdf[0], attachment_filename=pdf[1])
     return {"status":"okay"}
 
 @app.route('/add/individual/<string:type>/<string:name>/<string:phone>/<string:address>')

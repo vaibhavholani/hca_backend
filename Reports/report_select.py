@@ -14,14 +14,16 @@ def make_report(select, supplier_ids, party_ids, start_date, end_date):
     smart_ids = efficiency.smart_selection(supplier_ids, party_ids, start_date, end_date)
     print(smart_ids)
     if select == options[0]:
-        khata_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = khata_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     elif select == options[1]:
-        supplier_register_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = supplier_register_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     elif select == options[2]:
-        payment_list_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = payment_list_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     elif select == options[3]:
-        payment_list_summary.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = payment_list_summary.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     elif select == options[4]:
-        grand_total_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = grand_total_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     else:
-        legacy_payment_list.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+        report = legacy_payment_list.execute(smart_ids[0], smart_ids[1], start_date, end_date)
+    
+    return report

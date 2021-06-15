@@ -74,6 +74,9 @@ def execute(party_ids: List[int], supplier_ids: List[int], start_date: str, end_
     Show the Report
     """
     data = khata_report(party_ids, supplier_ids, start_date, end_date)
-    print("fine till here")
-    show_pdf.show_pdf(data, "khata_report")
+    
+    io_file, pdf = show_pdf.show_pdf(data)
+
+    return (io_file, "khata_report")
+
 
