@@ -2,6 +2,16 @@ from __future__ import annotations
 from psql import db_connector
 from Indivijuval import Supplier, Party, Bank, Transporter
 
+def add_individual(type, name, address):
+    if type == "supplier":
+        Supplier.create_supplier(name, address)
+    elif type == "party":
+        Party.create_party(name, address)
+    elif type == "bank":
+        Bank.create_bank(name, address)
+    else:
+        Transporter.create_transporter(name, address)
+
 
 def insert_supplier(supplier: Supplier) -> None:
 
