@@ -2,9 +2,7 @@ from __future__ import annotations
 from typing import List
 from reportlab.platypus import SimpleDocTemplate
 from reportlab.lib.pagesizes import letter
-import webbrowser
-import os
-
+import io
 
 def show_pdf(data: List, file_name: str):
     """
@@ -12,7 +10,7 @@ def show_pdf(data: List, file_name: str):
     """
 
     file_name1 = file_name + ".pdf"
-    file_name = "/{}".format(file_name1)
+    file_name = io.BytesIO()
     pdf = SimpleDocTemplate(
         file_name,
         pagesize=letter,
