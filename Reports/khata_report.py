@@ -77,6 +77,6 @@ def execute(party_ids: List[int], supplier_ids: List[int], start_date: str, end_
     
     io_file, pdf = show_pdf.show_pdf(data)
 
-    return (io_file, "khata_report")
+    return (io_file, "khata_report.pdf")
 
 
