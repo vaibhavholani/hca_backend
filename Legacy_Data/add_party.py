@@ -371,7 +371,5 @@ def add():
     for elements in parties:
         insert_individual.insert_party(elements)
 
-add()
-
 
 

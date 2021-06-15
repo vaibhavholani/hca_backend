@@ -1354,6 +1354,3 @@ def add():
 
     for elements in suppliers:
         insert_individual.insert_supplier(elements)
-    
-add()
-

@@ -6,7 +6,7 @@ from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register
 from API_Database import insert_individual
 from Entities import RegisterEntry, MemoEntry
 from Reports import report_select
-
+from Legacy_Data import add_party, add_suppliers
 
 app = Flask(__name__)
 
@@ -66,6 +66,14 @@ def add_memo_entry(object: str):
     object = json.loads(object)
     print(object)
     return MemoEntry.call(object)
+
+@app.route('/add_legacy')
+def add_legacy():
+    add_party.add()
+    add_suppliers.add()
+    return {"status": "okay"}
+    
+
 
 
 if __name__ == '__main__':
