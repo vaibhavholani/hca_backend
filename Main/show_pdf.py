@@ -12,7 +12,7 @@ def show_pdf(data: List, file_name: str):
     """
 
     file_name1 = file_name + ".pdf"
-    file_name = os.path.join(os.path.expanduser('~'), 'Desktop') + "/{}".format(file_name1)
+    file_name = "/{}".format(file_name1)
     pdf = SimpleDocTemplate(
         file_name,
         pagesize=letter,
@@ -22,5 +22,5 @@ def show_pdf(data: List, file_name: str):
     )
 
     pdf.build(data)
-    webbrowser.open_new(r'file_name')
+    # webbrowser.open_new(r'file_name')
     # messagebox.showinfo(title="Report Created", message="{} created on desktop".format(file_name1))
