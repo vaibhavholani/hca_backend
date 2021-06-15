@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import List
 from reportlab.platypus import SimpleDocTemplate
 from reportlab.lib.pagesizes import letter
-from tkinter import messagebox
 import webbrowser
 import os
 
