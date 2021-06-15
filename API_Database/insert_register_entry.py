@@ -29,10 +29,10 @@ def insert_register_entry(entry: RegisterEntry) -> None:
     db, cursor = db_connector.cursor()
 
     sql = "INSERT INTO register_entry (supplier_id, party_id, register_date, amount, bill_number, status, " \
-          "d_amount, d_percent) " \
+          "deduction) " \
           "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
     val = (entry.supplier_id, entry.party_id, str(entry.date), entry.amount, entry.bill_number, entry.status,
-           entry.d_amount, entry.d_percent)
+           entry.deduction)
 
     cursor.execute(sql, val)
     db_connector.add_stack_val(sql, val)
