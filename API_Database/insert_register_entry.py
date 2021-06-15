@@ -30,7 +30,7 @@ def insert_register_entry(entry: RegisterEntry) -> None:
 
     sql = "INSERT INTO register_entry (supplier_id, party_id, register_date, amount, bill_number, status, " \
           "deduction) " \
-          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+          "VALUES (%s, %s, %s, %s, %s, %s, %s)"
     val = (entry.supplier_id, entry.party_id, str(entry.date), entry.amount, entry.bill_number, entry.status,
            entry.deduction)
 
