@@ -9,7 +9,7 @@ from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
 
 app = Flask(__name__)
-BASE = "/hca/#"
+BASE = "/hca"
 
 @app.route(BASE + '/supplier_names_and_ids', methods=['GET'])
 def get_all_supplier_names():
