@@ -79,5 +79,7 @@ def execute(party_ids: List[int], supplier_ids: List[int], start_date: str, end_
     Show the Report
     """
     data = legacy_payment_list(party_ids, supplier_ids, start_date, end_date)
-    show_pdf.show_pdf(data, "legacy_payment_list")
+    io_file, pdf = show_pdf.show_pdf(data)
+
+    return (io_file, "")
 
