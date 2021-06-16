@@ -8,14 +8,14 @@ def connect():
     """
     Provides a reference to the database and its cursor
     """
-    DATABASE_URL = os.environ['DATABASE_URL']
-    # mydb  = psycopg2.connect(
-    #     dbname="postgres", 
-    #     user="postgres", 
-    #     password="Hema9350544808", 
-    #     host="localhost")
+    # DATABASE_URL = os.environ['DATABASE_URL']
+    mydb  = psycopg2.connect(
+        dbname="postgres", 
+        user="postgres", 
+        password="Hema9350544808", 
+        host="localhost")
     
-    mydb = psycopg2.connect(DATABASE_URL, sslmode="require")
+    # mydb = psycopg2.connect(DATABASE_URL, sslmode="require")
     return mydb
 
 

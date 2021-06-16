@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, make_response
 import json
 import sys
 sys.path.append("../")
@@ -53,8 +53,11 @@ def create_report():
         report = data['report']
         start = data['from']
         end = data['to']
-        pdf = report_select.make_report(report, supplier_id, party_id, start, end)
-        return send_file(pdf[0], attachment_filename=pdf[1])
+        pdf, name= report_select.make_report(report, supplier_id, party_id, start, end)
+        response = make_response(pdf.getvalue())
+        response.headers['Content-Disposition'] = "attachment; filename='sakulaci.pdf"
+        response.mimetype = 'application/pdf'
+        return response
     return {"status":"okay"}
 
 @app.route('/add/individual/<string:type>/<string:name>/<string:phone>/<string:address>')
