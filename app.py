@@ -1,4 +1,5 @@
 from flask import Flask, request, send_file, make_response
+from flask_cors import CORS
 import json
 import sys
 sys.path.append("../")
@@ -9,7 +10,8 @@ from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
 
 app = Flask(__name__)
-BASE = "/hca"
+CORS(app)
+BASE = ""
 
 @app.route(BASE + '/supplier_names_and_ids', methods=['GET'])
 def get_all_supplier_names():
