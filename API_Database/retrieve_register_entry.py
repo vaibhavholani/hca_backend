@@ -207,7 +207,7 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     query = "select bill_number, amount, " \
             "(amount - (partial_amount)-gr_amount - deduction)," \
             "to_char(register_date, 'DD/MM/YYYY'), " \
-            "DATE_PART(NOW() - register_date)::integer, " \
+            "DATE_PART('day', NOW() - register_date)::integer, " \
             "status from " \
             "register_entry JOIN supplier ON supplier.id = register_entry.supplier_id " \
             "where supplier_id = '{}' AND party_id = '{}' AND " \
@@ -233,19 +233,19 @@ def get_payment_list_summary_data(supplier_id: int, party_id: int, start_date: s
     # Find amount less than 40 days
     query1 = "select SUM(amount), SUM(amount) - SUM(partial_amount) - SUM(gr_amount) - SUM(deduction)" \
              "from register_entry where party_id = '{}' AND supplier_id = '{}'" \
-             " AND status != 'F' AND DATE_PART(NOW() - register_date) < 40 AND register_date >= '{}' " \
+             " AND status != 'F' AND DATE_PART('day', NOW() - register_date) < 40 AND register_date >= '{}' " \
              "AND register_date <= '{}';".format(party_id, supplier_id, start_date, end_date)
 
     # Find amount between 40 and 70 days
     query2 = "select SUM(amount), SUM(amount) - SUM(partial_amount) - SUM(gr_amount) - SUM(deduction) " \
              "from register_entry where party_id = '{}' AND supplier_id = '{}' " \
-             "AND status != 'F' AND DATE_PART(NOW() - register_date) BETWEEN 40 AND 70 AND register_date >= '{}' AND " \
+             "AND status != 'F' AND DATE_PART('day', NOW() - register_date) BETWEEN 40 AND 70 AND register_date >= '{}' AND " \
              "register_date <= '{}';".format(party_id, supplier_id, start_date, end_date)
 
     # Find amount more than 70 days
     query3 = "select SUM(amount), SUM(amount) - SUM(partial_amount) - SUM(gr_amount) - SUM(deduction) " \
              "from register_entry where party_id = '{}' AND supplier_id = '{}' " \
-             "AND status != 'F' AND 70 < DATE_PART(NOW() - register_date) AND register_date >= '{}' " \
+             "AND status != 'F' AND 70 < DATE_PART('day', NOW() - register_date) AND register_date >= '{}' " \
              "AND register_date <= '{}';".format(party_id, supplier_id, start_date, end_date)
 
     cursor.execute(query1)
