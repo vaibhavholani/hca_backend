@@ -1,4 +1,3 @@
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE supplier_seq;
 
 CREATE TABLE supplier (
@@ -9,7 +8,6 @@ CREATE TABLE supplier (
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 	);
 	
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE party_seq;
 
 CREATE TABLE party (
@@ -20,7 +18,6 @@ CREATE TABLE party (
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE bank_seq;
 
 CREATE TABLE bank (
@@ -31,7 +28,6 @@ CREATE TABLE bank (
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE Transport_seq;
 
 CREATE TABLE Transport (
@@ -42,7 +38,6 @@ CREATE TABLE Transport (
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE register_entry_seq;
 
 CREATE TABLE register_entry (
@@ -62,7 +57,6 @@ CREATE TABLE register_entry (
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE memo_entry_seq;
 
 CREATE TABLE memo_entry(
@@ -79,7 +73,6 @@ CREATE TABLE memo_entry(
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE memo_payments_seq;
 
 CREATE TABLE memo_payments(
@@ -92,7 +85,6 @@ CREATE TABLE memo_payments(
 	FOREIGN KEY (bank_id) REFERENCES bank(id)
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE memo_bills_seq;
 
 CREATE TABLE memo_bills (
@@ -105,7 +97,6 @@ CREATE TABLE memo_bills (
 	FOREIGN KEY (memo_id) REFERENCES memo_entry(id)
 );
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE TABLE gr_settle(
 	supplier_id INT,
 	party_id INT, 
@@ -117,7 +108,6 @@ CREATE TABLE gr_settle(
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 );
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE SEQUENCE supplier_party_account_seq;
 
 CREATE TABLE supplier_party_account(
@@ -132,12 +122,10 @@ CREATE TABLE supplier_party_account(
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE TABLE last_update(
 	updated_at TIMESTAMP(0)
 );
 
--- SQLINES LICENSE FOR EVALUATION USE ONLY
 CREATE TABLE stack(
     query VARCHAR(500),
     val VARCHAR(500),

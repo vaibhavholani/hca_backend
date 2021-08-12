@@ -8,7 +8,7 @@ the bill for an order is received.
 from __future__ import annotations
 import sys
 sys.path.append("../")
-from API_Database import insert_register_entry
+from API_Database import insert_register_entry, update_register_entry
 from typing import List, Dict
 import datetime
 
@@ -34,7 +34,7 @@ class RegisterEntry:
     date: datetime
     supplier_name: str
     party_name: str
-    goods_return: int
+    gr_amount: int
 
     def __init__(self, bill: int, amount: int, supplier_id: int, party_id: int,
                  date: str) -> None:
@@ -54,6 +54,27 @@ class RegisterEntry:
 
         self.status = "N"
         self.part_payment = 0
+        self.pending_amount = self.amount - self.gr_amount - self.deduction - self.part_payment
+    
+    def status_updater(self):
+
+        if self.part_payment == 0 and self.gr_amount == 0:
+            self.status = "N"
+        
+        elif self.part_payment != 0:
+            if self.gr_amount != 0:
+                self.status = "PG"
+            else: 
+                self.status = "P"
+        
+        elif self.gr_amount != 0:
+            self.status = "G"
+        
+        update_register_entry.update_register_entry_data(self)
+    
+    def pending_updater(self):
+        self.pending_amount = self.amount - self.gr_amount - self.deduction - self.part_payment
+
 
 
 def call(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> RegisterEntry:
@@ -64,12 +85,28 @@ def call(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> Reg
 
 def create(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> Dict:
     register = RegisterEntry(bill, amount, int(supplier["id"]), int(party["id"]), date)
-    print("register entry created")
     if insert_register_entry.check_new_register(register):
         insert_register_entry.insert_register_entry(register)
         return {"status": "okay"}
     return {"status": "error", "bill_num": {"error": True, "message": "Duplicate Bill Number"}}
 
+
+def create_instance(data: Dict)  -> RegisterEntry:
+
+    bill_number = int(data["bill_number"])
+    amount = int(data["amount"])
+    supplier_id = int(data["supplier_id"])
+    party_id = int(data["party_id"])
+    date = data["register_date"]
+
+    register = RegisterEntry(bill_number, amount, supplier_id, party_id, date)
+
+    register.gr_amount = int(data["gr_amount"])
+    register.deduction = int(data["deduction"])
+    register.status = data["status"]
+    register.part_payment = int(data["partial_amount"])
+    return register
+    
 
 
 

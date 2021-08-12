@@ -1,8 +1,10 @@
 from __future__ import annotations
+import sys
+sys.path.append("../")
 from Entities import MemoEntry
 from psql import db_connector
+from typing import Dict
 import datetime
-
 
 def check_new_memo(memo_number: int, memo_date: datetime, supplier_id: int, party_id: int) -> bool:
     """
@@ -61,3 +63,15 @@ def get_id_by_memo_number(memo_number, supplier_id, party_id) -> int:
     data = cursor.fetchall()
     db.close()
     return int(data[0][0])
+
+def get_memo_bills_by_id(memo_id: int) -> Dict:
+
+    # Open a new connection
+    db, cursor = db_connector.cursor(True)
+
+    query = "select id, bill_number, type, amount from memo_bills where memo_id = '{}'".format(memo_id)
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    db.close()
+    return data

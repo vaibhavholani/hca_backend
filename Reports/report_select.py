@@ -12,7 +12,7 @@ def make_report(select, supplier_ids, party_ids, start_date, end_date):
     start_date = (datetime.datetime.strptime(start_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
     end_date = (datetime.datetime.strptime(end_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
     smart_ids = efficiency.smart_selection(supplier_ids, party_ids, start_date, end_date)
-    print(smart_ids)
+
     if select == options[0]:
         report = khata_report.execute(smart_ids[0], smart_ids[1], start_date, end_date)
     elif select == options[1]:

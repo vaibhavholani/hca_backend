@@ -4,7 +4,9 @@ import json
 import sys
 sys.path.append("../")
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
-from API_Database import insert_individual
+from API_Database import insert_individual, retrieve_all, retrieve_from_id
+from API_Database import edit_individual, delete_entry, retrieve_memo_entry
+from API_Database import update_register_entry, update_memo_entry
 from Entities import RegisterEntry, MemoEntry
 from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
@@ -56,10 +58,11 @@ def create_report():
         report = data['report']
         start = data['from']
         end = data['to']
-        pdf, name= report_select.make_report(report, supplier_id, party_id, start, end)
-        response = make_response(pdf.getvalue())
-        response.headers['Content-Disposition'] = "attachment; filename='sakulaci.pdf"
-        response.mimetype = 'application/pdf'
+        report_select.make_report(report, supplier_id, party_id, start, end)
+        pdealer_df, name= report_select.make_report(report, supplier_id, party_id, start, end)
+        response = make_response(pdealer_df.getvalue())
+        response.headers['Content-Disposition'] = "attachment; filename='sakulaci.pdealer_df"
+        response.mimetype = 'application/pdealer_df'
         return response
     return {"status":"okay"}
 
@@ -73,6 +76,7 @@ def add_memo_entry(object: str):
     object = json.loads(object)
     print(object)
     return MemoEntry.call(object)
+    # return {"status": "okay"}
 
 @app.route(BASE + '/add_legacy')
 def add_legacy():
@@ -81,8 +85,41 @@ def add_legacy():
     
     return {"status": "okay"}
     
+@app.route(BASE + '/get_all/<string:table_name>')
+def all(table_name: str):
+    data = retrieve_all.get_all(table_name)
+    return json.dumps(data)
 
+@app.route(BASE + '/get_by_id/<string:table_name>/<int:id>')
+def get_id(table_name: str, id: int):
+    data = retrieve_from_id.get_from_id(table_name, id)
+    return json.dumps(data)
 
+@app.route(BASE + '/update/<string:table_name>', methods=['POST'])
+def update_id(table_name: str):
+    if request.method == 'POST':
+        data = request.json
+        if table_name == "register_entry":
+            re = RegisterEntry.create_instance(data)
+            return update_register_entry.update_register_entry_by_id(re, int(data["id"]))
+            return {"status": "okay"}
+        elif table_name == "memo_entry":
+            return update_memo_entry.update_memo_entry_from_obj(data)
+        else:
+            return edit_individual.edit_individual(data, table_name)
+
+@app.route(BASE + '/delete/<string:table_name>', methods=['POST'])
+def delete_id(table_name: str):
+    if request.method == 'POST':
+        data = request.json
+        return delete_entry.delete_entry(data, table_name)
+    
+    return {"status": "okay"}
+
+@app.route(BASE + '/get_memo_bills/<int:id>')
+def get_memo_bills(id: int):
+    data = retrieve_memo_entry.get_memo_bills_by_id(id)
+    return json.dumps(data)
 
 if __name__ == '__main__':
     app.run(debug=True)
