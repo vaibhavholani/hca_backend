@@ -125,6 +125,7 @@ def get_memo_bills(id: int):
 @app.route(BASE + '/fix_problems')
 def fix():
     update_register_entry.fix_problems()
-    
+    return {"status" : "okay"}
+
 if __name__ == '__main__':
     app.run(debug=True)
