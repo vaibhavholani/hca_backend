@@ -121,5 +121,10 @@ def get_memo_bills(id: int):
     data = retrieve_memo_entry.get_memo_bills_by_id(id)
     return json.dumps(data)
 
+
+@app.route(BASE + '/fix_problems')
+def fix():
+    update_register_entry.fix_problems()
+    
 if __name__ == '__main__':
     app.run(debug=True)

@@ -375,5 +375,3 @@ def legacy_payment_list(supplier_id: int, party_id: int, start_date: str, end_da
     return legacy_data
 
 
-
-
