@@ -1,5 +1,11 @@
-from flask import Flask, request, send_file, make_response
+from flask import Flask, request, send_file, make_response, jsonify
 from flask_cors import CORS
+
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
+
 import json
 import sys
 sys.path.append("../")
@@ -11,9 +17,26 @@ from Entities import RegisterEntry, MemoEntry
 from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
 
+# Crate flask app
 app = Flask(__name__)
 CORS(app)
+app.config["JWT_SECRET_KEY"] = "NHYd198vQNOBa9HrIAGEGNYrKHBegc9Z"  # Change this!
+jwt = JWTManager(app)
+
 BASE = ""
+
+## Authentication Request
+@app.route(BASE + '/token', methods=["POST"])
+def create_token():
+    username = request.json.get("username", None)
+    password = request.json.get("password", None)
+
+    ## Check if the username and password is valid
+    if username != "admin" or password != "admin5555":
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token)
 
 @app.route(BASE + '/supplier_names_and_ids', methods=['GET'])
 def get_all_supplier_names():
