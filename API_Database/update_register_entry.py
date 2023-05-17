@@ -35,18 +35,3 @@ def update_register_entry_by_id(entry: RegisterEntry, entry_id):
     db.close()
 
     return {"status": "okay"}
-
-
-
-
-def fix_problems():
-
-    db, cursor = db_connector.cursor()
-
-    sql = f"UPDATE register_entry SET gr_amount = 0 and status = 'N' where supplier_id = {998} and party_id = {70}"
-
-    cursor.execute(sql)
-
-    db.commit()
-    db.close()
-
