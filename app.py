@@ -97,9 +97,14 @@ def add_individual(type: str, name: str, phone:str, address:str):
 @app.route(BASE + '/add/memo_entry/<string:object>')
 def add_memo_entry(object: str):
     object = json.loads(object)
-    print(object)
+    # check if object contains the key "memo_gr_amount"
+    if "memo_gr_amount" in object:
+        # create a new version of object (keep all old properties) but "amount" is replaced by memo_gr_amount and "memo_type" is set to "gr"
+        gr_object = {**object, "amount": object["memo_gr_amount"], "memo_type": "gr"}
+        gr_return = MemoEntry.call(gr_object)
+        if gr_return["status"] == "error":
+            return gr_return
     return MemoEntry.call(object)
-    # return {"status": "okay"}
 
 @app.route(BASE + '/add_legacy')
 def add_legacy():
@@ -125,7 +130,6 @@ def update_id(table_name: str):
         if table_name == "register_entry":
             re = RegisterEntry.create_instance(data)
             return update_register_entry.update_register_entry_by_id(re, int(data["id"]))
-            return {"status": "okay"}
         elif table_name == "memo_entry":
             return update_memo_entry.update_memo_entry_from_obj(data)
         else:
