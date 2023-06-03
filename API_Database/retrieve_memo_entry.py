@@ -43,8 +43,9 @@ def check_add_memo(memo_number: int, memo_date: str) -> bool:
     db.close()
     if len(data) == 0:
         return True
-    if (memo_date - data[0][0]).days >= 365:
-        return True
+    
+    # if (memo_date - data[0][0]).days >= 365:
+    #     return True
     return False
 
 

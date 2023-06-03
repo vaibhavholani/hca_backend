@@ -68,3 +68,24 @@ def insert_memo_bills(entry: MemoBill) -> None:
     db.commit()
     db.close()
     db_connector.update()
+
+
+def insert_part_memo(entry: MemoBill) -> None:
+    """
+    Insert all the bills attached to the same memo number.
+    """
+
+    # Open a new connection
+    db, cursor = db_connector.cursor()
+
+    sql = "INSERT INTO part_payments (supplier_id, party_id, memo_id) " \
+          "VALUES (%s, %s, %s)"
+    val = (entry.supplier_id, entry.party_id, entry.memo_id)
+
+    cursor.execute(sql, val)
+    db_connector.add_stack_val(sql, val)
+    db.commit()
+    db.close()
+    db_connector.update()
+
+

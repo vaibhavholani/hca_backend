@@ -58,7 +58,7 @@ def get_all_bank_names():
 
 @app.route(BASE + '/credit/<int:supplier_id>/<int:party_id>', methods=['GET'])
 def get_credit(supplier_id: int, party_id: int):
-    data = retrieve_credit.get_credit(supplier_id, party_id)
+    data = retrieve_credit.get_pending_part(supplier_id, party_id)
     json_data = json.dumps(data)
     return json_data
 
@@ -94,17 +94,19 @@ def add_individual(type: str, name: str, phone:str, address:str):
     insert_individual.add_individual(type, name, address)
     return {"status":"okay"}
 
-@app.route(BASE + '/add/memo_entry/<string:object>')
-def add_memo_entry(object: str):
-    object = json.loads(object)
-    # check if object contains the key "memo_gr_amount"
-    if "memo_gr_amount" in object:
-        # create a new version of object (keep all old properties) but "amount" is replaced by memo_gr_amount and "memo_type" is set to "gr"
-        gr_object = {**object, "amount": object["memo_gr_amount"], "memo_type": "gr"}
-        gr_return = MemoEntry.call(gr_object)
+@app.route(BASE + '/add/memo_entry/<string:obj>')
+def add_memo_entry(obj: str):
+    obj = json.loads(obj)
+    # check if obj contains the key "memo_gr_amount"
+    if "memo_gr_amount" in obj:
+        # create a new version of obj (keep all old properties) but "amount" is replaced by memo_gr_amount and "memo_type" is set to "gr"
+        gr_obj = {**obj, "amount": obj["memo_gr_amount"], "memo_type": "Goods Return"}
+        # allowing duplicate memo_number for the second iteration of memo_entry
+        obj = {**obj, "allow_duplicate_memo_number": True}
+        gr_return = MemoEntry.call(gr_obj)
         if gr_return["status"] == "error":
             return gr_return
-    return MemoEntry.call(object)
+    return MemoEntry.call(obj)
 
 @app.route(BASE + '/add_legacy')
 def add_legacy():

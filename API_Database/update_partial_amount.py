@@ -43,3 +43,22 @@ def use_partial_amount(supplier_id: int, party_id: int, amount: int) -> None:
     db.commit()
     db.close()
     db_connector.update()
+
+
+def update_part_payment(supplier_id: int, party_id: int, memo_id:int, use_memo_id:int) -> None:
+    """
+    Use partial amount between a supplier and party
+    """
+
+    # Memo updates not showing
+    # Open a new connection
+    db, cursor = db_connector.cursor()
+
+    query = "UPDATE part_payments SET used = {}, use_memo_id = {} WHERE supplier_id = {} AND party_id = {} AND memo_id = {}" \
+        .format(True, use_memo_id, supplier_id, party_id, memo_id)
+    print(query)
+    cursor.execute(query)
+    db_connector.add_stack(query)
+    db.commit()
+    db.close()
+    db_connector.update()

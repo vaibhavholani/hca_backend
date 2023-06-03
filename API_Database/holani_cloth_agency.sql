@@ -122,6 +122,22 @@ CREATE TABLE supplier_party_account(
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);
 
+CREATE SEQUENCE part_payment_seq;
+
+CREATE TABLE part_payments(
+    id INT DEFAULT nextval('part_payment_seq') PRIMARY KEY,
+	supplier_id INT,
+	party_id INT,
+	memo_id INT,
+	used boolean DEFAULT false,
+	use_memo_id INT,
+	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (party_id) REFERENCES party(id),
+	FOREIGN KEY (supplier_id) REFERENCES supplier(id),
+	FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
+	FOREIGN KEY (use_memo_id) REFERENCES memo_entry(id)
+	);
+
 CREATE TABLE last_update(
 	updated_at TIMESTAMP(0)
 );
