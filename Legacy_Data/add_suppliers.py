@@ -1354,3 +1354,7 @@ def add():
 
     for elements in suppliers:
         insert_individual.insert_supplier(elements)
+
+
+if __name__ == "__main__":
+	add()

@@ -371,5 +371,8 @@ def add():
     for elements in parties:
         insert_individual.insert_party(elements)
 
+if __name__ == "__main__":
+	add()
+
 
 
