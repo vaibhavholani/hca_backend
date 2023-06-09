@@ -1,10 +1,13 @@
 from flask import Flask, request, send_file, make_response, jsonify
 from flask_cors import CORS
+from datetime import datetime
+import os
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+from dotenv import load_dotenv
 
 import json
 import sys
@@ -13,10 +16,13 @@ from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register
 from API_Database import insert_individual, retrieve_all, retrieve_from_id
 from API_Database import edit_individual, delete_entry, retrieve_memo_entry
 from API_Database import update_register_entry, update_memo_entry
-from backup import backup_postgresql_database
+from backup import backup
 from Entities import RegisterEntry, MemoEntry
 from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
+
+# load env file
+load_dotenv()
 
 # Crate flask app
 app = Flask(__name__)
@@ -152,7 +158,7 @@ def get_memo_bills(id: int):
     return json.dumps(data)
 
 @app.route(BASE + '/backup', methods=['GET'])
-def backup():
+def backup_data():
     
     # Get the current date
     current_date = datetime.now()
@@ -160,20 +166,14 @@ def backup():
     formatted_date = current_date.strftime("%d_%b_%Y")
 
     # Usage example
-    username = 'admin'
-    database_name = 'hca'
-    backup_file_path = f'/Users/mac/development/backups/backup_{formatted_date}.sql'
+    dbname=os.getenv("DB_NAME")
+    user=os.getenv("DB_USER")
+    password=os.getenv("DB_PASSWORD")
+    
+    os.makedirs("./backups", exist_ok=True)
+    backup_file_path = f'./backups/backup_{formatted_date}.sql'
 
-    return backup_postgresql_database(username, database_name, backup_file_path)
-
-
-# Format the date as "01_Jan_2023"
-formatted_date = current_date.strftime("%d_%b_%Y")
-
-print(formatted_date)
-
-    backup_postgresql_database()
-    return 
+    return backup.backup_postgresql_database(user, dbname, password, backup_file_path)
 
 @app.route(BASE + '/fix_problems')
 def fix():
