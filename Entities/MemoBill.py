@@ -5,7 +5,7 @@ This class is used to represent a bill in a memo_entry.
 """
 
 from __future__ import annotations
-from typing import List
+from typing import List, Dict
 from API_Database import insert_memo_entry
 
 class MemoBill:
@@ -20,10 +20,10 @@ class MemoBill:
         self.type = memo_type
 
 
-def call(memo_id: int, bill_number: int, amount: int, memo_type: str) -> None:
+def call(obj: Dict) -> None:
     """
     Create a memo bill and insert it into the database.
     """
-    bill = MemoBill(memo_id, bill_number, amount, memo_type)
+    bill = MemoBill(**obj)
     insert_memo_entry.insert_memo_bills(bill)
 

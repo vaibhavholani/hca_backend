@@ -1,16 +1,17 @@
 from __future__ import annotations
+from typing import Dict
 from psql import db_connector
 from Indivijuval import Supplier, Party, Bank, Transporter
 
-def add_individual(type, name, address):
+def add_individual(type, obj: Dict):
     if type == "supplier":
-        Supplier.create_supplier(name, address)
+        Supplier.create_supplier(obj)
     elif type == "party":
-        Party.create_party(name, address)
+        Party.create_party(obj)
     elif type == "bank":
-        Bank.create_bank(name, address)
+        Bank.create_bank(obj)
     else:
-        Transporter.create_transporter(name, address)
+        Transporter.create_transporter(obj)
 
 
 def insert_supplier(supplier: Supplier) -> None:

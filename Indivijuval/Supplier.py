@@ -5,6 +5,7 @@ The file is supposed to represent a Supplier
 """
 from __future__ import annotations
 from API_Database import insert_individual
+from typing import Dict
 class Supplier:
     """
     The class represents a supplier.
@@ -21,7 +22,7 @@ class Supplier:
         self.address = address
 
 
-def create_supplier(name: str, address: str) -> None:
+def create_supplier(obj:Dict) -> None:
     """
     Create and return a Supplier
 
@@ -30,6 +31,6 @@ def create_supplier(name: str, address: str) -> None:
     :param address: The address of the supplier.
     :return: Supplier
     """
-    supplier = Supplier(name, address)
+    supplier = Supplier(**obj)
     insert_individual.insert_supplier(supplier)
 

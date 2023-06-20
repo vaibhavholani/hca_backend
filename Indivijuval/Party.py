@@ -5,6 +5,7 @@ The file is supposed to represent a Party
 """
 from __future__ import annotations
 from API_Database import insert_individual
+from typing import Dict
 
 class Party:
     """
@@ -21,7 +22,7 @@ class Party:
         self.address = address
 
 
-def create_party(name: str, address: str) -> None:
+def create_party(obj: Dict) -> None:
 
-    party =  Party(name, address)
+    party =  Party(**obj)
     insert_individual.insert_party(party)
