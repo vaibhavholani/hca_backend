@@ -3,6 +3,7 @@ from typing import List, Dict
 
 class Report: 
     def __init__(self, 
+                 title: str,
                  header_ids: List[int], 
                  subheader_ids: List[int], 
                  start_date: str, 
