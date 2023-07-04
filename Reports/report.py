@@ -22,7 +22,7 @@ class Report:
                  start_date: str, 
                  end_date: str) -> None:
         
-        self.title = title
+        self.title = title.replace('_', ' ').title()
         self.header_ids = header_ids
         self.subheader_ids = subheader_ids
         self.start_date = start_date
@@ -58,7 +58,13 @@ class Report:
             
             if len(data_rows) != 0:
               subheader_title = self.subheader_entity.get_report_name(subheader_id)
-              subheading = {"title": subheader_title, "dataRows": data_rows}
+
+              # extract json for total rows
+              total_rows = self.generate_total_rows(data_rows, ["amount", "memo_amt"])
+              # extract json for special rows
+              total_rows.append(self.generate_special_row("Part", "5000", "amount", False))
+
+              subheading = {"title": subheader_title, "dataRows": data_rows, "specialRows": total_rows}
               subheadings.append(subheading)
           
           if len(subheadings) != 0:
@@ -66,10 +72,28 @@ class Report:
             all_headings.append(table_data)
             
         all_data["headings"] = all_headings
-        temp_data = json.dumps(all_data, cls=DecimalEncoder)
-        breakpoint()
-        return table_data
+        json_data = json.loads(json.dumps(all_data, cls=DecimalEncoder))
+        return json_data
     
+    def generate_total_rows(self, data_rows: Dict, columnNames: List[str], before_data: bool = False):
+      """
+      Generate total values for certain columns
+      """
+      total_rows = []
+      for column in columnNames:
+          
+          total = 0
+          try:
+            for row in data_rows:
+                if column in row:
+                  total += int(row[column])
+            total_rows.append({"name": "Total", "value": total, "column": column, "beforeData": before_data})
+          except:
+             print(f"Error in generating total rows for column {column} in row {row}")
+      return total_rows
+    
+    def generate_special_row(self, entity_name: str, value: str, column: str, before_data: bool = False):
+      return {"name": entity_name, "value": value, "column": column, "beforeData": before_data}
           
                 
                 
