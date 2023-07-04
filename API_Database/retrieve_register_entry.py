@@ -3,15 +3,7 @@ from typing import List, Tuple
 import datetime
 from Entities import RegisterEntry
 from psql import db_connector
-import json
-import decimal
 
-# Custom JSON encoder for Decimal objects
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
-        return super(DecimalEncoder, self).default(obj)
 
 def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int) -> int:
     """
@@ -141,7 +133,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
-    query = "select register_entry.bill_number as billNo., to_char(register_entry.register_date, 'DD/MM/YYYY'), " \
+    query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
             "register_entry.amount, register_entry.status " \
             "from register_entry " \
             "where party_id = '{}' AND supplier_id = '{}' AND " \
@@ -150,19 +142,18 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
 
     cursor.execute(query)
     bills_data = cursor.fetchall()
-    
-    breakpoint()
 
     if len(bills_data) == 0:
         return bills_data
+   
 
     for bills in bills_data:
-        query_2 = "select memo_entry.memo_number, memo_bills.amount, to_char(memo_entry.register_date, 'DD/MM/YYYY'), " \
-                  "memo_bills.type, memo_entry.amount " \
+        query_2 = "select memo_entry.memo_number as memo_no, memo_bills.amount as memo_amt, to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date, " \
+                  "memo_bills.type as memo_type, memo_entry.amount as cheque_amount " \
                   "from memo_entry JOIN memo_bills on (memo_entry.id = memo_bills.memo_id) " \
                   "where memo_bills.bill_number = '{}' AND memo_entry.supplier_id = '{}' " \
                   "AND memo_entry.party_id = '{}'; " \
-            .format(bills["bill_number"], supplier_id, party_id)
+            .format(bills["bill_no"], supplier_id, party_id)
         cursor.execute(query_2)
         memo_data = cursor.fetchall()
 
@@ -173,12 +164,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
                 data_dict = memo_data[nums]
 
             data.append(data_dict)
-        print(data)
-        breakpoint()
-        if len(memo_data) == 0:
-            data_tuple = bills + ("-", "-", "-", "-")
-            data.append(data_tuple)
-
+    
     db.close()
     return data
 

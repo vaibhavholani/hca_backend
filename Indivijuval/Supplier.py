@@ -5,6 +5,7 @@ The file is supposed to represent a Supplier
 """
 from __future__ import annotations
 from API_Database import insert_individual
+from API_Database import retrieve_indivijual
 from typing import Dict
 class Supplier:
     """
@@ -20,6 +21,20 @@ class Supplier:
 
         self.name = name
         self.address = address
+    
+    @staticmethod
+    def get_supplier_name_by_id(supplier_id: int) -> str:
+        """
+        Get supplier name by ID
+        """
+        return retrieve_indivijual.get_supplier_name_by_id(supplier_id)
+    
+    @staticmethod
+    def get_report_name(supplier_id: int) -> str:
+        """
+        Get supplier name by ID for report
+        """
+        return "Supplier Name: " + retrieve_indivijual.get_supplier_name_by_id(supplier_id)
 
 
 def create_supplier(obj:Dict) -> None:
