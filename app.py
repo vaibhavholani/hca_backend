@@ -88,12 +88,8 @@ def create_report():
         report = data['report']
         start = data['from']
         end = data['to']
-        report_select.make_report(report, supplier_id, party_id, start, end)
-        pdealer_df, name= report_select.make_report(report, supplier_id, party_id, start, end)
-        response = make_response(pdealer_df.getvalue())
-        response.headers['Content-Disposition'] = "attachment; filename='sakulaci.pdealer_df"
-        response.mimetype = 'application/pdealer_df'
-        return response
+        report_data = report_select.make_report(report, supplier_id, party_id, start, end)
+        return report_data
     return {"status":"okay"}
 
 @app.route(BASE + '/add/individual/<string:type>/<string:name>/<string:phone>/<string:address>')

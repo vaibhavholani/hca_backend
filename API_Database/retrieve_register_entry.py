@@ -137,7 +137,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
             "register_entry.amount, register_entry.status " \
             "from register_entry " \
             "where party_id = '{}' AND supplier_id = '{}' AND " \
-            "register_date >= '{}' AND register_date <= '{}';"\
+            "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;"\
         .format(party_id, supplier_id, start_date, end_date)
 
     cursor.execute(query)
@@ -174,18 +174,18 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
         Returns a list of all bill_number's amount and date
         """
     # Open a new connection
-    db, cursor = db_connector.cursor()
+    db, cursor = db_connector.cursor(True)
 
     start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
-    query = "select bill_number, amount, " \
+    query = "select bill_number as bill_no, amount, " \
             "CASE WHEN status='F' THEN '0'" \
             "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amount," \
-            "to_char(register_date, 'DD/MM/YYYY'), status from " \
+            "to_char(register_date, 'DD/MM/YYYY') as bill_date, status from " \
             "register_entry JOIN party ON party.id = register_entry.party_id " \
             "where supplier_id = '{}' AND party_id = '{}' AND " \
-            "register_date >= '{}' AND register_date <= '{}'". \
+            "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;". \
         format(supplier_id, party_id, start_date, end_date)
 
     cursor.execute(query)
@@ -199,15 +199,15 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     Get all the pending bills info
     """
     # Open a new connection
-    db, cursor = db_connector.cursor()
+    db, cursor = db_connector.cursor(True)
 
     start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
-    query = "select bill_number, amount, " \
-            "(amount - (partial_amount)-gr_amount - deduction)," \
-            "to_char(register_date, 'DD/MM/YYYY'), " \
-            "DATE_PART('day', NOW() - register_date)::integer, " \
+    query = "select bill_number as bill_no, amount, " \
+            "(amount - (partial_amount)-gr_amount - deduction) as pending_amount," \
+            "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
+            "DATE_PART('day', NOW() - register_date)::integer as pending_days, " \
             "status from " \
             "register_entry JOIN supplier ON supplier.id = register_entry.supplier_id " \
             "where supplier_id = '{}' AND party_id = '{}' AND " \
