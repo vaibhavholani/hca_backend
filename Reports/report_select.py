@@ -1,7 +1,6 @@
 import sys
 sys.path.append("../")
 from API_Database import efficiency
-from Reports import supplier_register_report, payment_list_report
 from Reports import payment_list_summary, grand_total_report, legacy_payment_list
 from Reports import report
 import datetime
