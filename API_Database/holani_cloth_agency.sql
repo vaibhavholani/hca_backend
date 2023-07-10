@@ -68,7 +68,6 @@ CREATE TABLE memo_entry(
 	UNIQUE (memo_number, party_id, supplier_id, register_date),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	amount INT default 0,
-	gr_amount INT default 0,
 	FOREIGN KEY (party_id) REFERENCES party(id),
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);

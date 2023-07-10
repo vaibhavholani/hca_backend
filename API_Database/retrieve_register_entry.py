@@ -117,6 +117,13 @@ def get_register_entry_bill_numbers(supplier_id: int, party_id: int, bill_number
 
     return re_by_bill
 
+def _pop_dict_keys(pop_dict: dict, keys: List[str]) -> dict:
+    """
+    Removes keys from the dictionary
+    """
+    for key in keys:
+        pop_dict.pop(key, None)
+    return pop_dict
 
 def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Tuple]:
     """
@@ -134,7 +141,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
     query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
-            "register_entry.amount, register_entry.status " \
+            "register_entry.amount as bill_amt, register_entry.status as bill_status " \
             "from register_entry " \
             "where party_id = '{}' AND supplier_id = '{}' AND " \
             "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;"\
@@ -149,7 +156,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
 
     for bills in bills_data:
         query_2 = "select memo_entry.memo_number as memo_no, memo_bills.amount as memo_amt, to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date, " \
-                  "memo_bills.type as memo_type, memo_entry.amount as cheque_amount " \
+                  "memo_entry.amount as chk_amt, memo_bills.type as memo_type " \
                   "from memo_entry JOIN memo_bills on (memo_entry.id = memo_bills.memo_id) " \
                   "where memo_bills.bill_number = '{}' AND memo_entry.supplier_id = '{}' " \
                   "AND memo_entry.party_id = '{}'; " \
@@ -157,14 +164,19 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
         cursor.execute(query_2)
         memo_data = cursor.fetchall()
 
-        for nums in range(len(memo_data)):
-            if nums == 0:
-                data_dict = {**bills, **memo_data[nums]}
-            else:
-                data_dict = memo_data[nums]
+        if len(memo_data) != 0:
+            for nums in range(len(memo_data)):
+                if nums == 0:
+                    data_dict = {**bills, **memo_data[nums]}
+                else:
+                    # temp_dict = dict(memo_data[nums])
+                    # temp_dict = _pop_dict_keys(temp_dict, ["chk_amt"])
+                    data_dict = memo_data[nums]
 
-            data.append(data_dict)
-    
+                data.append(data_dict)
+        else:
+            data.append(bills)
+
     db.close()
     return data
 
@@ -179,7 +191,7 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
-    query = "select bill_number as bill_no, amount, " \
+    query = "select bill_number as bill_no, amount as bill_amt, " \
             "CASE WHEN status='F' THEN '0'" \
             "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amount," \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, status from " \
@@ -204,7 +216,7 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
-    query = "select bill_number as bill_no, amount, " \
+    query = "select bill_number as bill_no, amount as bill_amt, " \
             "(amount - (partial_amount)-gr_amount - deduction) as pending_amount," \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
             "DATE_PART('day', NOW() - register_date)::integer as pending_days, " \

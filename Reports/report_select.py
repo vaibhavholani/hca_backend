@@ -22,7 +22,8 @@ def make_report(select, supplier_ids, party_ids, start_date, end_date):
         report_obj =  payment_list_summary.execute(party_ids, supplier_ids, start_date, end_date)
     elif select == options[4]:
         report_obj =  grand_total_report.execute(party_ids, supplier_ids, start_date, end_date)
-    else:
+    elif select == options[5]:
         report_obj =  legacy_payment_list.execute(party_ids, supplier_ids, start_date, end_date)
-    
+    else:
+        raise Exception("Invalid Option")
     return report_obj
