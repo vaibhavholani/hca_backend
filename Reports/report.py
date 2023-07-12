@@ -203,8 +203,14 @@ class Table:
       """
       Generate part rows for a given header and subheader
       """
-      
       return retrieve_partial_payment.get_partial_payment(supplier_id, party_id)
+    
+    def generate_part_columns(self, supplier_id: int, party_id: int, **kwargs):
+      """
+      Generate part columns for a given header and subheader
+      """
+      return retrieve_partial_payment.get_partial_payment_columns(supplier_id, party_id)
+       
 
     def _total_row_dict(self, name: str, numeric: int, column: str, before_data: bool, negative: bool = False):
       value = self._format_indian_currency(numeric, negative=negative)
