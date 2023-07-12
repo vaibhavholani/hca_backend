@@ -46,11 +46,11 @@ CREATE TABLE register_entry (
 	party_id INT, 
 	register_date TIMESTAMP(0),
 	amount DECIMAL(10, 2),
-	partial_amount DECIMAL(10,2) DEFAULT 0,
-	gr_amount INT DEFAULT 0,
 	bill_number INT,
-	status VARCHAR(2) DEFAULT 'N',
+	gr_amount INT DEFAULT 0,
 	deduction INT DEFAULT 0,
+	status VARCHAR(2) DEFAULT 'N',
+	partial_amount DECIMAL(10,2) DEFAULT 0,
 	UNIQUE (bill_number, supplier_id, party_id, register_date),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (party_id) REFERENCES party(id),
@@ -68,7 +68,6 @@ CREATE TABLE memo_entry(
 	UNIQUE (memo_number, party_id, supplier_id, register_date),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	amount INT default 0,
-	gr_amount INT default 0,
 	FOREIGN KEY (party_id) REFERENCES party(id),
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);

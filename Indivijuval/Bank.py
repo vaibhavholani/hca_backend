@@ -5,7 +5,7 @@ The file is supposed to represent a Bank
 """
 from __future__ import annotations
 from API_Database import insert_individual
-
+from typing import Dict
 
 class Bank:
     """
@@ -21,6 +21,6 @@ class Bank:
         self.address = address
 
 
-def create_bank(name: str, address: str) -> None:
-    bank = Bank(name, address)
+def create_bank(obj) -> None:
+    bank = Bank(**obj)
     insert_individual.insert_bank(bank)

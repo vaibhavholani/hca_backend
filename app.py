@@ -1,4 +1,6 @@
+import flask
 from flask import Flask, request, send_file, make_response, jsonify
+
 from flask_cors import CORS
 from datetime import datetime
 import os
@@ -27,6 +29,8 @@ load_dotenv()
 # Crate flask app
 app = Flask(__name__)
 CORS(app)
+# stop flask from sorting keys
+app.config['JSON_SORT_KEYS'] = False
 app.config["JWT_SECRET_KEY"] = "NHYd198vQNOBa9HrIAGEGNYrKHBegc9Z"  # Change this!
 jwt = JWTManager(app)
 
@@ -88,12 +92,8 @@ def create_report():
         report = data['report']
         start = data['from']
         end = data['to']
-        report_select.make_report(report, supplier_id, party_id, start, end)
-        pdealer_df, name= report_select.make_report(report, supplier_id, party_id, start, end)
-        response = make_response(pdealer_df.getvalue())
-        response.headers['Content-Disposition'] = "attachment; filename='sakulaci.pdealer_df"
-        response.mimetype = 'application/pdealer_df'
-        return response
+        report_data = report_select.make_report(report, supplier_id, party_id, start, end)
+        return jsonify(report_data)
     return {"status":"okay"}
 
 @app.route(BASE + '/add/individual/<string:type>/<string:name>/<string:phone>/<string:address>')

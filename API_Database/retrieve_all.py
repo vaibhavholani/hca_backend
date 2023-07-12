@@ -24,7 +24,7 @@ def get_all_memo_entry():
     
     db, cursor = db_connector.cursor(True)
 
-    sql = f"select id, memo_number, supplier_id, party_id, to_char(register_date, 'DD/MM/YYYY') as register_date,floor(amount)::integer as amount, gr_amount from memo_entry"
+    sql = f"select id, memo_number, supplier_id, party_id, to_char(register_date, 'DD/MM/YYYY') as register_date,floor(amount)::integer as amount from memo_entry"
 
     cursor.execute(sql)
     return cursor.fetchall()

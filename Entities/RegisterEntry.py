@@ -32,8 +32,8 @@ class RegisterEntry:
     bill_number: int
     amount: int
     date: datetime
-    supplier_name: str
-    party_name: str
+    supplier_id: int
+    party_id: int
     gr_amount: int
 
     def __init__(self, bill: int, amount: int, supplier_id: int, party_id: int,
@@ -77,7 +77,7 @@ class RegisterEntry:
 
 
 
-def call(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> RegisterEntry:
+def call(bill: int, amount: int, supplier: Dict, party: Dict,  date: str, *args, **kwargs) -> RegisterEntry:
     register = RegisterEntry(bill, amount, int(supplier["id"]), int(party["id"]), date)
     if insert_register_entry.check_new_register(register):
         insert_register_entry.insert_register_entry(register)
@@ -92,7 +92,6 @@ def create(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> D
 
 
 def create_instance(data: Dict)  -> RegisterEntry:
-
     bill_number = int(data["bill_number"])
     amount = int(data["amount"])
     supplier_id = int(data["supplier_id"])

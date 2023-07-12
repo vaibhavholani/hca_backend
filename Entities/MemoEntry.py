@@ -81,7 +81,13 @@ class MemoEntry:
         amount = self.amount
         if self.mode == "Full":
             amount = bills.pending_amount
-        MemoBill.call(self.memo_id, bills.bill_number, amount, self.mode[0].upper())
+        
+        call_dict = {"memo_id": self.memo_id, 
+                     "bill_number": bills.bill_number,
+                     "amount": amount,
+                     "memo_type": self.mode[0].upper()
+                     }
+        MemoBill.call(call_dict)
 
     def get_memo_id(self) -> int:
         """
@@ -139,7 +145,12 @@ class MemoEntry:
         """
         Store the deductions made in a memo bill
         """
-        MemoBill.call(self.memo_id, bill_number, deduct_amount, type)
+        call_dict = {"memo_id": self.memo_id, 
+                     "bill_number": bill_number,
+                     "amount": deduct_amount,
+                     "memo_type": type
+                     }
+        MemoBill.call(call_dict)
 
 
     def database_partial_payment(self):
@@ -155,7 +166,12 @@ class MemoEntry:
         insert_memo_entry.insert_part_memo(self)
         
         # add a memo bill with bill number -1
-        MemoBill.call(self.memo_id, -1, self.amount, "PR")
+        call_dict = {"memo_id": self.memo_id, 
+                     "bill_number": -1,
+                     "amount": self.amount,
+                     "memo_type": "PR"
+                     }
+        MemoBill.call(call_dict)
 
     def goods_return(self) -> None:
         """
