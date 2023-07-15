@@ -58,8 +58,8 @@ class Report:
             if len(data_rows) != 0:
               subheader_title = self.table.subheader_entity.get_report_name(subheader_id)
 
-              # subheading = {"title": subheader_title, "dataRows": data_rows, "specialRows": special_rows}
-              subheading = {"title": subheader_title, "dataRows": data_rows}
+              subheading = {"title": subheader_title, "dataRows": data_rows, "specialRows": special_rows}
+              # subheading = {"title": subheader_title, "dataRows": data_rows}
               subheadings.append(subheading)
           
           if len(subheadings) != 0:
@@ -158,7 +158,7 @@ class Table:
           try:
             for row in data_rows:
                 if column in row:
-                  amount = int(row[column])
+                  amount = int(row[column]) if row[column] != "" else 0
                   total += amount
                   if column == "memo_amt" and "memo_type" in row:
                     if row["memo_type"] == "G":

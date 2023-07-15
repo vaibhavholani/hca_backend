@@ -153,7 +153,8 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     if len(bills_data) == 0:
         return bills_data
    
-
+    # dummy memo_bill_retrieval
+    dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "memo_type": ""}
     for bills in bills_data:
         query_2 = "select memo_entry.memo_number as memo_no, memo_bills.amount as memo_amt, to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date, " \
                   "memo_entry.amount as chk_amt, memo_bills.type as memo_type " \
@@ -175,7 +176,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
 
                 data.append(data_dict)
         else:
-            data.append(bills)
+            data.append({**bills, **dummy_memo})
 
     db.close()
     return data
