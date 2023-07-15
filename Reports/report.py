@@ -58,7 +58,8 @@ class Report:
             if len(data_rows) != 0:
               subheader_title = self.table.subheader_entity.get_report_name(subheader_id)
 
-              subheading = {"title": subheader_title, "dataRows": data_rows, "specialRows": special_rows}
+              # subheading = {"title": subheader_title, "dataRows": data_rows, "specialRows": special_rows}
+              subheading = {"title": subheader_title, "dataRows": data_rows}
               subheadings.append(subheading)
           
           if len(subheadings) != 0:
