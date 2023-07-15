@@ -98,8 +98,9 @@ def create_report():
 
 @app.route(BASE + '/add/individual/<string:type>/<string:name>/<string:phone>/<string:address>')
 def add_individual(type: str, name: str, phone:str, address:str):
-    insert_individual.add_individual(type, name, address)
-    return {"status":"okay"}
+
+    obj =  {"name":name, "address":address}
+    return insert_individual.add_individual(type,obj)
 
 @app.route(BASE + '/add/memo_entry/<string:obj>')
 def add_memo_entry(obj: str):

@@ -22,5 +22,4 @@ class Transporter:
 
 
 def create_transporter(obj: Dict) -> None:
-    transporter = Transporter(**obj)
-    insert_individual.insert_transporter(transporter)
+    return Transporter(**obj)

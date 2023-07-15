@@ -39,5 +39,4 @@ class Party:
 
 def create_party(obj: Dict) -> None:
 
-    party =  Party(**obj)
-    insert_individual.insert_party(party)
+    return Party(**obj)
