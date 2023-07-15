@@ -22,5 +22,4 @@ class Bank:
 
 
 def create_bank(obj) -> None:
-    bank = Bank(**obj)
-    insert_individual.insert_bank(bank)
+    return Bank(**obj)

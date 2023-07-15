@@ -46,6 +46,6 @@ def create_supplier(obj:Dict) -> None:
     :param address: The address of the supplier.
     :return: Supplier
     """
-    supplier = Supplier(**obj)
-    insert_individual.insert_supplier(supplier)
+    return Supplier(**obj)
+
 
