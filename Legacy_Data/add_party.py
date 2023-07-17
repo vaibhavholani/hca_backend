@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../")
-from Indivijuval import Party
+from Individual import Party
 from API_Database import insert_individual
 
 party_data = """P	JAGDAMBA ENTERPRISE	JAGDAMBA	1

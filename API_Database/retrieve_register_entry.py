@@ -218,17 +218,24 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
 
     query = "select bill_number as bill_no, amount as bill_amt, " \
-            "(amount - (partial_amount)-gr_amount - deduction) as pending_amount," \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
-            "DATE_PART('day', NOW() - register_date)::integer as pending_days, " \
+            "(amount - (partial_amount)-gr_amount - deduction) as bill_amt," \
+            "DATE_PART('day', NOW() - register_date)::integer as days, " \
             "status from " \
             "register_entry JOIN supplier ON supplier.id = register_entry.supplier_id " \
             "where supplier_id = '{}' AND party_id = '{}' AND " \
             "register_date >= '{}' AND register_date <= '{}' AND status != 'F'". \
         format(supplier_id, party_id, start_date, end_date)
 
+    # add dummy data
+    
     cursor.execute(query)
-    data = cursor.fetchall()
+    temp_data = cursor.fetchall()
+    # dummy memo_bill_retrieval
+    dummy_memo = {"part_no": "", "part_date": "", "part_amt": ""}
+    data = []
+    for bills in temp_data:
+        data.append({**dummy_memo, **bills})
     db.close()
     return data
 

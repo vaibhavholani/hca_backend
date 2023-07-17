@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict
 from psql import db_connector
-from Indivijuval import Supplier, Party, Bank, Transporter
+from Individual import Supplier, Party, Bank, Transporter
 
 def add_individual(entity_type, obj):
     entity_mapping = {
