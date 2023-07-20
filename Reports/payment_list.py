@@ -7,7 +7,9 @@ class PaymentList(table.Table):
     
     def generate_total_rows(self, data_rows: Dict, before_data: bool = False):
         total_rows = []
-
+        # total for the all tables between supplier and party
+        header_total_rows = []
+        
         # WARNING: only used when pending amt when both bill_amt and memo_amt are calculated 
         bill_subtotal = 0
         part_subtotal = 0
@@ -55,4 +57,4 @@ class PaymentList(table.Table):
             total_rows.append(self._total_row_dict("Part (-)", part_subtotal, "bill_amt", before_data, negative=True))
             total_rows.append(self._total_row_dict("Pending (=)", pending_amt, "bill_amt", before_data))
       
-        return total_rows
+        return total_rows, header_total_rows
