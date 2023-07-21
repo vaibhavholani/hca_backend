@@ -62,4 +62,4 @@ class KhataReport(table.Table):
         total_rows.append(self._total_row_dict("Paid+GR (-)", memo_subtotal, "bill_amt", before_data, negative=True))
         total_rows.append(self._total_row_dict("Pending (=)", pending_amt, "bill_amt", before_data))
       
-      return total_rows, header_total_rows
+      return total_rows

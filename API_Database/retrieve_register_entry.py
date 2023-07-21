@@ -1,24 +1,25 @@
 from __future__ import annotations
 from typing import List, Tuple
-import datetime
 from Entities import RegisterEntry
 from psql import db_connector
+from API_Database.utils import parse_date
+from datetime import datetime, timedelta
+from pypika import Query, Table, Field, functions as fn
 
 
 def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int) -> int:
     """
     Returns primary key id of the register entry
     """
-    # Open a new connection
-    db, cursor = db_connector.cursor()
 
     query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' " \
             "order by " \
             "register_date DESC". \
         format(bill_number, supplier_id, party_id)
-    cursor.execute(query)
-    data = cursor.fetchall()
-    db.close()
+    
+    result = db_connector.execute_query(query, False)
+    data = result["result"]
+    
     return data[0][0]
 
 
@@ -28,7 +29,7 @@ def check_unique_bill_number(supplier_id: int, party_id: int, bill_number: int, 
     """
     db, cursor = db_connector.cursor()
 
-    date = datetime.datetime.strptime(date, "%d/%m/%Y")
+    date = parse_date(date)
 
     query = "select id, register_date from register_entry where " \
             "bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}'". \
@@ -129,16 +130,14 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     """
     Returns a list of all bill_number's amount and date between the given dates
     """
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
 
     data = []
 
     table_header = ("Bill No.", "Bill Date", "Bill Amt",
                     "Status", "Memo No.", "Memo Amt", "Memo Date", "M.Type", "Chk. Amt")
 
-    start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
-    end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
+    start_date = str(parse_date(start_date))
+    end_date = str(parse_date(end_date))
 
     query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
             "register_entry.amount as bill_amt, register_entry.status as bill_status " \
@@ -147,8 +146,8 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
             "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;"\
         .format(party_id, supplier_id, start_date, end_date)
 
-    cursor.execute(query)
-    bills_data = cursor.fetchall()
+    result = db_connector.execute_query(query)
+    bills_data = result["result"]
 
     if len(bills_data) == 0:
         return bills_data
@@ -162,8 +161,8 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
                   "where memo_bills.bill_number = '{}' AND memo_entry.supplier_id = '{}' " \
                   "AND memo_entry.party_id = '{}'; " \
             .format(bills["bill_no"], supplier_id, party_id)
-        cursor.execute(query_2)
-        memo_data = cursor.fetchall()
+        result = db_connector.execute_query(query_2)
+        memo_data = result["result"]
 
         if len(memo_data) != 0:
             for nums in range(len(memo_data)):
@@ -178,7 +177,6 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
         else:
             data.append({**bills, **dummy_memo})
 
-    db.close()
     return data
 
 
@@ -189,8 +187,8 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     # Open a new connection
     db, cursor = db_connector.cursor(True)
 
-    start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
-    end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
+    start_date = str(parse_date(start_date))
+    end_date = str(parse_date(end_date))
 
     query = "select bill_number as bill_no, amount as bill_amt, " \
             "CASE WHEN status='F' THEN '0'" \
@@ -214,8 +212,8 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     # Open a new connection
     db, cursor = db_connector.cursor(True)
 
-    start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
-    end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
+    start_date = str(parse_date(start_date))
+    end_date = str(parse_date(end_date))
 
     query = "select bill_number as bill_no, amount as bill_amt, " \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
@@ -247,8 +245,8 @@ def get_payment_list_summary_data(supplier_id: int, party_id: int, start_date: s
     # Open a new connection
     db, cursor = db_connector.cursor()
 
-    start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
-    end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
+    start_date = str(parse_date(start_date))
+    end_date = str(parse_date(end_date))
 
     # Find amount less than 40 days
     query1 = "select SUM(amount), SUM(amount) - SUM(partial_amount) - SUM(gr_amount) - SUM(deduction)" \
@@ -297,8 +295,8 @@ def grand_total_work(supplier_id: int, party_id: int, start_date: str, end_date:
     # Open a new connection
     db, cursor = db_connector.cursor()
 
-    start_date = str(datetime.datetime.strptime(start_date, "%d/%m/%Y"))
-    end_date = str(datetime.datetime.strptime(end_date, "%d/%m/%Y"))
+    start_date = str(parse_date(start_date))
+    end_date = str(parse_date(end_date))
 
     query = "select SUM(amount) from register_entry where " \
             "party_id = '{}' AND supplier_id = '{}' AND " \
@@ -394,4 +392,47 @@ def legacy_payment_list(supplier_id: int, party_id: int, start_date: str, end_da
 
     return legacy_data
 
-
+def get_total_bill_entity(supplier_id: int, party_id: int, start_date: datetime, end_date: datetime, column_name: str, pending: bool, days: dict = {}):
+    register_entry = Table('register_entry')
+    
+    # Selecting the column to calculate the sum
+    sum_column = Field(column_name)
+    
+    # Creating the base query
+    query = Query.from_(register_entry).select(fn.Sum(sum_column))
+    
+    # Adding the WHERE conditions
+    query = query.where(register_entry.supplier_id == supplier_id)
+    query = query.where(register_entry.party_id == party_id)
+    query = query.where(register_entry.register_date.between(start_date, end_date))
+    
+    # Handling pending flag
+    if pending:
+        query = query.where(register_entry.status != 'F')
+    
+    # Handling days condition
+    if 'over' in days and 'under' in days:
+        over_threshold = datetime.now() - timedelta(days=days['over'])
+        under_threshold = datetime.now() - timedelta(days=days['under'])
+        query = query.where(register_entry.register_date < over_threshold)
+        query = query.where(register_entry.register_date >= under_threshold)
+    elif 'over' in days:
+        over_threshold = datetime.now() - timedelta(days=days['over'])
+        query = query.where(register_entry.register_date < over_threshold)
+    elif 'under' in days:
+        under_threshold = datetime.now() - timedelta(days=days['under'])
+        query = query.where(register_entry.register_date >= under_threshold)
+    
+    # Executing the query
+    db, cursor = db_connector.cursor(True)
+    cursor.execute(query.get_sql())
+    result = cursor.fetchall()
+    result = result[0]
+    # If the sum in none, return 0 else return integer value of sum
+    if result["sum"] is None:
+        result = 0
+    else:
+        result = int(result["sum"]) 
+    # Closing the connection
+    db.close()
+    return result

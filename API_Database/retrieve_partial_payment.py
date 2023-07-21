@@ -13,7 +13,6 @@ def get_partial_payment(supplier_id: int, party_id: int) -> int:
         supplier_id, party_id)
     cursor.execute(query)
     data = cursor.fetchall()
-    print(data)
     # find the memo_billss for memo_id 
     part_list = []
     for parts in data:
