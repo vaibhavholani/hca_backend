@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict
+from typing import List, Dict, Union
 from Individual import Supplier, Party
 from API_Database import efficiency
 from API_Database import retrieve_register_entry, retrieve_partial_payment
@@ -49,12 +49,7 @@ class Table:
         """
         Generate data rows for a given header and subheader
         """
-        input_args = {
-            "party_id" if self.header_entity is Party.Party else "supplier_id": header_id,
-            "supplier_id" if self.subheader_entity is Supplier.Supplier else "party_id": subheader_id,
-            "start_date": start_date,
-            "end_date": end_date
-        }
+        input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
         
         data_rows = self.data_rows(**input_args)
         
@@ -83,6 +78,16 @@ class Table:
       Generate total values for certain columns
       """
       raise NotImplementedError
+    
+    def generate_cumulative(self, 
+                            header_ids: Union[List[int], int], 
+                            subheader_ids: Union[List[int], int], 
+                            start_date: str, 
+                            end_date: str):
+      """
+      Generate cumulative values for certain columns
+      """
+      return {}
     
     def generate_special_row(self, entity_name: str, value: str, column: str, before_data: bool = False):
       return {"name": entity_name, "value": self._format_indian_currency(value), "column": column, "beforeData": before_data}
@@ -114,6 +119,30 @@ class Table:
     def _total_row_dict(self, name: str, numeric: int, column: str, before_data: bool, negative: bool = False):
       value = self._format_indian_currency(numeric, negative=negative)
       return {"name": name, "value": value, "column": column, "numeric": numeric, "beforeData": before_data}
+    
+    def _generate_input_args(self, header_ids: Union[List[int], int], 
+                            subheader_ids: Union[List[int], int], 
+                            start_date: str, 
+                            end_date: str):
+      """
+      Function to map header and subheader ids to party_id and supplier_id
+      """
+      # handle the casee when header_ids and subheader_ids are int
+      if isinstance(header_ids, int) and isinstance(subheader_ids, int):
+        input_args = {
+            "party_id" if self.header_entity is Party.Party else "supplier_id": header_ids,
+            "supplier_id" if self.subheader_entity is Supplier.Supplier else "party_id": subheader_ids,
+            "start_date": start_date,
+            "end_date": end_date
+        }
+      else: 
+        input_args = {
+              "party_ids" if self.header_entity is Party.Party else "supplier_ids": header_ids,
+              "supplier_ids" if self.subheader_entity is Supplier.Supplier else "party_ids": subheader_ids,
+              "start_date": start_date,
+              "end_date": end_date
+          }
+      return input_args
     
     @staticmethod
     def _format_indian_currency(number, negative: bool = False):

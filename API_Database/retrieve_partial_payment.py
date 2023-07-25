@@ -16,12 +16,12 @@ def get_partial_payment(supplier_id: int, party_id: int) -> int:
     # find the memo_billss for memo_id 
     part_list = []
     for parts in data:
-
         if parts["used"] == False:
             query="select memo_entry.memo_number as memo_no, to_char(register_date, 'DD/MM/YYYY') as memo_date, memo_entry.amount as chk_amt, memo_bills.amount as memo_amt, memo_bills.type as memo_type from memo_entry join memo_bills on memo_entry.id = memo_bills.memo_id where memo_entry.id = '{}' and memo_bills.type = 'PR'".format(parts["memo_id"])
             cursor.execute(query)
             memo_bills_data = cursor.fetchall()
             part_list.extend(memo_bills_data)
+    
     db.close()
     return part_list
 

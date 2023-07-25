@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Tuple
+from typing import List, Union, Tuple
 from Entities import RegisterEntry
 from psql import db_connector
 from API_Database.utils import parse_date
@@ -436,3 +436,35 @@ def get_total_bill_entity(supplier_id: int, party_id: int, start_date: datetime,
     # Closing the connection
     db.close()
     return result
+
+def generate_total(supplier_ids: Union[int, List[int]], 
+                party_ids: Union[int, List[int]], 
+                start_date: Union[datetime, str], 
+                end_date: Union[datetime, str],
+                column_name: str, 
+                pending: bool = False,
+                days: dict = {}):
+    """
+    Generates the total for the given supplier_ids and party_ids
+
+    days: dict = may contain two keys: 'over' and 'under'. e.g: {'over': 30, 'under': 60}
+    """
+
+    # Handling single supplier_id and party_id
+    if isinstance(supplier_ids, int):
+        supplier_ids = [supplier_ids]
+    if isinstance(party_ids, int):
+        party_ids = [party_ids]
+
+    # Handling date
+    if isinstance(start_date, str):
+        start_date = parse_date(start_date)
+    if isinstance(end_date, str):
+        end_date = parse_date(end_date)
+
+    # use generate_total_bill_entity function and find the the total for each supplier_id and party_id
+    total = 0
+    for supplier_id in supplier_ids:
+        for party_id in party_ids:
+            total += get_total_bill_entity(supplier_id, party_id, start_date, end_date, column_name, pending, days)
+    return total
