@@ -9,6 +9,7 @@ class KhataReport(table.Table):
        # ASSUMPTION: "memo_amt" total must show decreased GR and LESS values and then show total value
       # ASSUMPTION: "bill_amt" total must remove total GR and LESS in them and then show pending value
       total_rows = []
+      header_total_rows = []
 
       # WARNING: only used when pending amt when both bill_amt and memo_amt are calculated 
       bill_subtotal = 0

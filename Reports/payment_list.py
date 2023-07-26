@@ -1,13 +1,33 @@
-from typing import Dict
+from typing import Dict, List
+from API_Database import retrieve_register_entry, retrieve_memo_entry
 from Reports import table
 
 class PaymentList(table.Table):
     def __init__(self) -> None:
         super().__init__("Payment List")
     
+    def generate_cumulative(self, header_ids: List[int], 
+                                subheader_ids: List[int], 
+                                start_date: str, 
+                                end_date: str,):
+        
+        input_args = self._generate_input_args(header_ids, subheader_ids, start_date, end_date)
+
+        total_pending_amount = retrieve_register_entry.generate_total(**input_args, 
+                                               column_name="amount", 
+                                               pending=True)
+        
+        total_part = retrieve_memo_entry.generate_memo_total(**input_args,
+                                                             memo_type="PR")
+        pending = total_pending_amount - total_part
+
+        return {"name": "Total Pending", "value": self._format_indian_currency(pending)}
+    
     def generate_total_rows(self, data_rows: Dict, before_data: bool = False):
         total_rows = []
-
+        # total for the all tables between supplier and party
+        header_total_rows = []
+        
         # WARNING: only used when pending amt when both bill_amt and memo_amt are calculated 
         bill_subtotal = 0
         part_subtotal = 0

@@ -64,6 +64,10 @@ class Report:
           
           if len(subheadings) != 0:
             table_data["subheadings"] = subheadings
+            # calculate cumulative values only if cumulatiive is no an empty dict
+            cumulative = self.table.generate_cumulative(header_id, self.subheader_ids, self.start_date, self.end_date)
+            if len(cumulative) != 0:
+              table_data["cumulative"] = cumulative
             all_headings.append(table_data)
             
         all_data["headings"] = all_headings

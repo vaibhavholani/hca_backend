@@ -1,12 +1,17 @@
 from __future__ import annotations
 import sys
 sys.path.append("../")
-from Entities import MemoEntry
+from pypika import Query, Table, Field, functions as fn
+from API_Database.retrieve_partial_payment import get_partial_payment
+from API_Database.utils import parse_date
 from psql import db_connector
 from typing import Dict
 import datetime
 
-def check_new_memo(memo_number: int, memo_date: datetime, supplier_id: int, party_id: int) -> bool:
+def check_new_memo(memo_number: int, 
+                   memo_date: datetime, 
+                   supplier_id: int, 
+                   party_id: int) -> bool:
     """
     Check if the memo already exists.
     """
@@ -76,3 +81,88 @@ def get_memo_bills_by_id(memo_id: int) -> Dict:
     data = cursor.fetchall()
     db.close()
     return data
+
+
+def get_total_memo_entity(supplier_id: int,
+                           party_id: int, 
+                           start_date: datetime.datetime, 
+                           end_date: datetime.datetime, 
+                           memo_type: str):
+    
+    # Handle the case if memo_type is "PR"
+    if memo_type == "PR":
+        result = get_partial_payment(supplier_id, party_id)
+        total_amount = 0
+        for row in result:
+            total_amount += row["memo_amt"]
+        return total_amount
+    
+    memo_entry = Table('memo_entry')
+    memo_bills = Table('memo_bills')
+
+    # Creating the base query
+    query = Query.from_(memo_bills).select(fn.Sum(memo_bills.amount).as_('total_amount'))
+
+    # Joining memo_bills with memo_entry to filter the bills based on supplier_id, party_id, and type
+    query = query.join(memo_entry).on(memo_bills.memo_id == memo_entry.id)
+    
+    # Adding the WHERE conditions
+    query = query.where(memo_entry.supplier_id == supplier_id)
+    query = query.where(memo_entry.party_id == party_id)
+    query = query.where(memo_bills.type == memo_type)
+    query = query.where(memo_entry.register_date.between(start_date, end_date))
+    
+    # Executing the query
+    db, cursor = db_connector.cursor(True)
+    cursor.execute(query.get_sql())
+    result = cursor.fetchall()
+    
+    # If the sum is None, return 0 else return integer value of sum
+    total_amount = result[0]["total_amount"]
+    result = 0 if total_amount is None else int(total_amount)
+
+    # Closing the connection
+    db.close()
+    return result
+
+from typing import Union, List
+from datetime import datetime, timedelta
+
+def generate_memo_total(supplier_ids: Union[int, List[int]],
+                        party_ids: Union[int, List[int]],
+                        start_date: datetime,
+                        end_date: datetime,
+                        memo_type: str):
+    """
+    Generates the total for the given supplier_ids and party_ids for memo_bills
+
+    Parameters:
+    supplier_ids (Union[int, List[int]]): Supplier IDs to consider for total calculation
+    party_ids (Union[int, List[int]]): Party IDs to consider for total calculation
+    start_date (datetime): Start date for filtering memo_bills based on register_date
+    end_date (datetime): End date for filtering memo_bills based on register_date
+    memo_type (str): Type of memo_bills to consider for total calculation
+
+    Returns:
+    int: The calculated total for memo_bills based on the provided parameters
+    """
+
+    # Handling single supplier_id and party_id
+    if isinstance(supplier_ids, int):
+        supplier_ids = [supplier_ids]
+    if isinstance(party_ids, int):
+        party_ids = [party_ids]
+
+    # Handling date
+    if isinstance(start_date, str):
+        start_date = parse_date(start_date)
+    if isinstance(end_date, str):
+        end_date = parse_date(end_date)   
+
+    # Use calculate_memo_totals function and find the total for each supplier_id, party_id, and memo_type
+    total = 0
+    for supplier_id in supplier_ids:
+        for party_id in party_ids:
+            total += get_total_memo_entity(supplier_id, party_id, start_date, end_date, memo_type)
+    return total
+ 

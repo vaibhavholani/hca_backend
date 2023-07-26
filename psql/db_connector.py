@@ -22,6 +22,8 @@ def connect():
     return mydb
 
 
+
+
 def cursor(dict = False) -> Tuple:
     """
     return the cursor and db connection
@@ -32,6 +34,38 @@ def cursor(dict = False) -> Tuple:
     else: 
         db_cursor = database.cursor()
     return database, db_cursor
+
+def execute_query(query: str, dictCursor: bool = True):
+    """
+    Executes a query and returns the result
+    """
+    
+    # Detect query type
+    query_type = query.strip().split()[0].upper()
+    if query_type not in ["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE"]:
+        raise Exception("Invalid query type")
+    
+    try:
+        # connecting to database
+        db, cur = cursor(dictCursor)
+        
+        # Executing the query and fetching the result
+        cur.execute(query)
+        result = cur.fetchall()
+
+        # Committing the changes if query is not SELECT
+        if query_type != "SELECT":
+            db.commit()
+
+        db.close()
+        result = {"result": result, "status": "okay"}
+    except Exception as e:
+        print("Error executing query:", e)
+        result = {"result": [], 
+                  "status": "error", 
+                  "message": "Error executing query. Please Contact Vaibhav"}
+    
+    return result
 
 def update(): pass
 
