@@ -102,6 +102,7 @@ class Table:
       """
       Generate part columns for a given header and subheader
       """
+      breakpoint()
       part_data = self.generate_part_rows(supplier_id, party_id)
       part_columns = []
       for part in part_data:
@@ -114,6 +115,7 @@ class Table:
           elif part_key == "memo_amt":
             part_column["part_amt"] = part[part_key]
         part_columns.append(part_column)
+      breakpoint()
       return part_columns
 
     def _total_row_dict(self, name: str, numeric: int, column: str, before_data: bool, negative: bool = False):
@@ -156,6 +158,11 @@ class Table:
     def merge_dicts_parallel(dict_a, dict_b):
       merged_dicts = []
       for dict_a_i, dict_b_i in zip_longest(dict_a, dict_b, fillvalue={}):
+          # remove keys in dict_b_i which are already in dict_a_i
+          for key in dict_a_i:
+            if key in dict_b_i:
+              dict_b_i.pop(key)
+              print("WARNING: Duplicate keys in second dict is removed in merge_dicts_parallel")
           merged_dict = {**dict_a_i, **dict_b_i}
           merged_dicts.append(merged_dict)
       return merged_dicts
