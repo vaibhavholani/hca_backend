@@ -5,7 +5,8 @@ from API_Database import efficiency
 from API_Database import retrieve_register_entry, retrieve_partial_payment
 from itertools import zip_longest
 
-class Table:
+
+class MetaTable:
     
     _preset = {
         "Khata Report": {
@@ -19,9 +20,9 @@ class Table:
             "header_entity": Supplier.Supplier,
             "subheader_entity": Party.Party,
             "data_rows": retrieve_register_entry.get_supplier_register_data, 
-            "numeric_columns": ["bill_amt"],
-            "total_rows_columns": ["bill_amt"],
-            "part_display_mode": "row"
+            "numeric_columns": ["bill_amt", "pending_amt"],
+            "total_rows_columns": ["bill_amt", "pending_amt"],
+            "part_display_mode": "none"
             },
           "Payment List": {
             "header_entity": Party.Party,
@@ -45,34 +46,6 @@ class Table:
         # to auto select header_entity
         self.header_supplier = True if self.header_entity is Supplier.Supplier else False
     
-    def generate_data_rows(self, header_id: int, subheader_id: int, start_date: str, end_date: str):
-        """
-        Generate data rows for a given header and subheader
-        """
-        input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
-        
-        data_rows = self.data_rows(**input_args)
-        
-        # add part rows
-        if self.part_display_mode == "column":
-          data_rows = self.merge_dicts_parallel(self.generate_part_columns(**input_args), data_rows )
-        elif self.part_display_mode == "row":
-          data_rows.extend(self.generate_part_rows(**input_args))
-        
-        # generate speical rows 
-        total_rows = self.generate_total_rows(data_rows)
-
-        # format numeric columns
-        for row in data_rows:
-            for column in self.numeric_columns:
-                try:
-                    if column in row:
-                      row[column] = self._format_indian_currency((row[column]))
-                except:
-                    print(f"Error in formatting column {column} in row {row} to Indian Currency")
-        
-        return data_rows, total_rows
-    
     def generate_total_rows(self, data_rows: Dict, before_data: bool = False):
       """
       Generate total values for certain columns
@@ -89,8 +62,6 @@ class Table:
       """
       return {}
     
-    def generate_special_row(self, entity_name: str, value: str, column: str, before_data: bool = False):
-      return {"name": entity_name, "value": self._format_indian_currency(value), "column": column, "beforeData": before_data}
     
     def generate_part_rows(self, supplier_id: int, party_id: int, **kwargs):
       """
@@ -98,25 +69,8 @@ class Table:
       """
       return retrieve_partial_payment.get_partial_payment(supplier_id, party_id)
     
-    def generate_part_columns(self, supplier_id: int, party_id: int, **kwargs):
-      """
-      Generate part columns for a given header and subheader
-      """
-      breakpoint()
-      part_data = self.generate_part_rows(supplier_id, party_id)
-      part_columns = []
-      for part in part_data:
-        part_column = {}
-        for part_key in part:
-          if part_key == "memo_no":
-            part_column["part_no"] = part[part_key]
-          elif part_key == "memo_date":
-            part_column["part_date"] = part[part_key]
-          elif part_key == "memo_amt":
-            part_column["part_amt"] = part[part_key]
-        part_columns.append(part_column)
-      breakpoint()
-      return part_columns
+    def _generate_special_row(self, entity_name: str, value: str, column: str, before_data: bool = False):
+      return {"name": entity_name, "value": self._format_indian_currency(value), "column": column, "beforeData": before_data}
 
     def _total_row_dict(self, name: str, numeric: int, column: str, before_data: bool, negative: bool = False):
       value = self._format_indian_currency(numeric, negative=negative)
@@ -125,12 +79,14 @@ class Table:
     def _generate_input_args(self, header_ids: Union[List[int], int], 
                             subheader_ids: Union[List[int], int], 
                             start_date: str, 
-                            end_date: str):
+                            end_date: str,
+                            force_list_args: bool = False,
+                            force_int_args: bool = False):
       """
       Function to map header and subheader ids to party_id and supplier_id
       """
       # handle the casee when header_ids and subheader_ids are int
-      if isinstance(header_ids, int) and isinstance(subheader_ids, int):
+      if force_int_args or (isinstance(header_ids, int) and isinstance(subheader_ids, int) and not force_list_args):
         input_args = {
             "party_id" if self.header_entity is Party.Party else "supplier_id": header_ids,
             "supplier_id" if self.subheader_entity is Supplier.Supplier else "party_id": subheader_ids,
@@ -166,3 +122,106 @@ class Table:
           merged_dict = {**dict_a_i, **dict_b_i}
           merged_dicts.append(merged_dict)
       return merged_dicts
+
+
+class HeaderSubheaderTable(MetaTable):
+        
+    def __init__(self, title: str) -> None:
+        super().__init__(title)
+    
+    def generate_data_rows(self, header_id: int, subheader_id: int, start_date: str, end_date: str) -> tuple[List[Dict], List[Dict]]:
+        """
+        Generate data rows for a given header and subheader
+        """
+        input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
+        
+        data_rows = self.data_rows(**input_args)
+        
+        # add part rows
+        if self.part_display_mode == "column":
+          data_rows = self.merge_dicts_parallel(self.generate_part_columns(**input_args), data_rows )
+        elif self.part_display_mode == "row":
+          data_rows.extend(self.generate_part_rows(**input_args))
+        
+        # generate speical rows 
+        total_rows = self.generate_total_rows(data_rows)
+
+        cumulative = self.generate_cumulative(header_id, subheader_id, start_date, end_date)
+
+        # format numeric columns
+        for row in data_rows:
+            for column in self.numeric_columns:
+                try:
+                    if column in row:
+                      row[column] = self._format_indian_currency((row[column]))
+                except:
+                    print(f"Error in formatting column {column} in row {row} to Indian Currency")
+        
+        return data_rows, total_rows, cumulative
+    
+    def generate_part_columns(self, supplier_id: int, party_id: int, **kwargs):
+      """
+      Generate part columns for a given header and subheader
+      """
+      part_data = self.generate_part_rows(supplier_id, party_id)
+      part_columns = []
+      for part in part_data:
+        part_column = {}
+        for part_key in part:
+          if part_key == "memo_no":
+            part_column["part_no"] = part[part_key]
+          elif part_key == "memo_date":
+            part_column["part_date"] = part[part_key]
+          elif part_key == "memo_amt":
+            part_column["part_amt"] = part[part_key]
+        part_columns.append(part_column)
+      return part_columns
+    
+
+class HeaderTable(MetaTable):
+  def __init__(self, title: str) -> None:
+      super().__init__(title)
+    
+  def generate_data_rows(self, header_id: int, subheader_ids: int, start_date: str, end_date: str) -> tuple[List[Dict], List[Dict]]:
+    """
+    Generate data rows for a given header and subheader
+    """
+    data_rows = []
+    
+    for subheader_id in subheader_ids:
+      input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
+      register_data = self.data_rows(**input_args)
+      # pop "party_name" if header enetity is party and vice versa
+      if self.header_entity is Party.Party:
+        for register in register_data:
+          register.pop("party_name")
+      elif self.header_entity is Supplier.Supplier:
+        for register in register_data:
+          register.pop("supplier_name")
+      
+      # add part rows
+      if self.part_display_mode == "column":
+        data_rows = self.merge_dicts_parallel(self.generate_part_columns(**input_args), data_rows )
+      elif self.part_display_mode == "row":
+        data_rows.extend(self.generate_part_rows(**input_args))
+        
+      data_rows.extend(register_data)
+    
+    
+    # generate speical rows 
+    total_rows = self.generate_total_rows(data_rows)
+
+    # format numeric columns
+    for row in data_rows:
+        for column in self.numeric_columns:
+            try:
+                if column in row:
+                  row[column] = self._format_indian_currency((row[column]))
+            except:
+                print(f"Error in formatting column {column} in row {row} to Indian Currency")
+    
+    # Empty cumulative
+    cumulative = {}
+
+    return data_rows, total_rows, cumulative
+
