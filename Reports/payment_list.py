@@ -1,17 +1,17 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from API_Database import retrieve_register_entry, retrieve_memo_entry
 from Reports import table
 
-class PaymentList(table.Table):
+class PaymentList(table.HeaderSubheaderTable):
     def __init__(self) -> None:
         super().__init__("Payment List")
     
-    def generate_cumulative(self, header_ids: List[int], 
-                                subheader_ids: List[int], 
+    def generate_cumulative(self, header_ids: Union[int,List[int]], 
+                                subheader_ids: Union[int, List[int]], 
                                 start_date: str, 
                                 end_date: str,):
         
-        input_args = self._generate_input_args(header_ids, subheader_ids, start_date, end_date)
+        input_args = self._generate_input_args(header_ids, subheader_ids, start_date, end_date, force_list_args=True)
 
         total_pending_amount = retrieve_register_entry.generate_total(**input_args, 
                                                column_name="amount", 

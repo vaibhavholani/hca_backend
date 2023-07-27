@@ -1,12 +1,12 @@
 from typing import Dict
 from Reports import table
 
-class KhataReport(table.Table):
+class KhataReport(table.HeaderSubheaderTable):
     def __init__(self) -> None:
         super().__init__("Khata Report")
     
     def generate_total_rows(self, data_rows: Dict, before_data: bool = False):
-       # ASSUMPTION: "memo_amt" total must show decreased GR and LESS values and then show total value
+      # ASSUMPTION: "memo_amt" total must show decreased GR and LESS values and then show total value
       # ASSUMPTION: "bill_amt" total must remove total GR and LESS in them and then show pending value
       total_rows = []
       header_total_rows = []

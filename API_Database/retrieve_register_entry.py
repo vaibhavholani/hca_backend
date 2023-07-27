@@ -190,11 +190,14 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     start_date = str(parse_date(start_date))
     end_date = str(parse_date(end_date))
 
-    query = "select bill_number as bill_no, amount as bill_amt, " \
+    query = "select to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
+            "party.name as party_name, supplier.name as supplier_name, "\
+            "bill_number as bill_no, amount as bill_amt, " \
             "CASE WHEN status='F' THEN '0'" \
-            "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amount," \
-            "to_char(register_date, 'DD/MM/YYYY') as bill_date, status from " \
+            "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amt," \
+            "status from " \
             "register_entry JOIN party ON party.id = register_entry.party_id " \
+            "join supplier on supplier.id = register_entry.supplier_id " \
             "where supplier_id = '{}' AND party_id = '{}' AND " \
             "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;". \
         format(supplier_id, party_id, start_date, end_date)
