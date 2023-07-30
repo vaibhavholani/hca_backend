@@ -6,8 +6,9 @@ The file is supposed to represent a Bank
 from __future__ import annotations
 from API_Database import insert_individual
 from typing import Dict
+from .Individual import Individual
 
-class Bank:
+class Bank(Individual):
     """
     The class represents a Bank.
 
@@ -16,10 +17,5 @@ class Bank:
 
     """
 
-    def __init__(self, name: str, address: str):
-        self.name = name
-        self.address = address
-
-
-def create_bank(obj) -> None:
-    return Bank(**obj)
+    def __init__(self, name: str, address: str, *args, **kwargs):
+        super().__init__(name, address)

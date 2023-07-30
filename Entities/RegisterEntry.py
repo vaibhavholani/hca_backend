@@ -6,15 +6,13 @@ the bill for an order is received.
 """
 
 from __future__ import annotations
-import sys
-sys.path.append("../")
-from API_Database import insert_register_entry, update_register_entry
-from typing import List, Dict
 import datetime
+from typing import List, Dict
+from API_Database import insert_register_entry, update_register_entry, utils
+from Exceptions import DataError
 
 
 class RegisterEntry:
-
     """
     A class that represents a register entry
 
@@ -29,88 +27,88 @@ class RegisterEntry:
 
     """
 
-    bill_number: int
-    amount: int
-    date: datetime
     supplier_id: int
     party_id: int
+    register_date: datetime
+    amount: int
+    bill_number: int
+    date: datetime
+    status: str  
     gr_amount: int
+    deduction: int
+    partial_amount: int
 
-    def __init__(self, bill: int, amount: int, supplier_id: int, party_id: int,
-                 date: str) -> None:
+    def __init__(self,
+                 bill_number: int,
+                 amount: int,
+                 supplier_id: int,
+                 party_id: int,
+                 register_date: str,
+                 status: str = "N",
+                 gr_amount: int = 0,
+                 deduction: int = 0,
+                 partial_amount: int = 0,
+                 *args,
+                 **kwargs
+                 ) -> None:
 
-        self.bill_number = bill
+        self.bill_number = bill_number
         self.amount = amount
         self.supplier_id = supplier_id
         self.party_id = party_id
-        try:
-            self.date = datetime.datetime.strptime(date, "%Y-%m-%d")
-        except ValueError:
-            self.date = datetime.datetime.strptime(date, "%d/%m/%Y")
+        self.register_date = utils.parse_date(register_date)
+        self.gr_amount = gr_amount
+        self.deduction = deduction
+        self.status = status
+        self.partial_amount = partial_amount
+        self.pending_amount = self.amount - self.gr_amount - \
+            self.deduction - self.partial_amount
 
-        # Deduction AMOUNT and Deduction PERCENT
-        self.gr_amount = 0
-        self.deduction = 0
-
-        self.status = "N"
-        self.part_payment = 0
-        self.pending_amount = self.amount - self.gr_amount - self.deduction - self.part_payment
-    
     def status_updater(self):
 
-        if self.part_payment == 0 and self.gr_amount == 0:
+        if self.partial_amount == 0 and self.gr_amount == 0:
             self.status = "N"
-        
-        elif self.part_payment != 0:
+
+        elif self.partial_amount != 0:
             if self.gr_amount != 0:
                 self.status = "PG"
-            else: 
+            else:
                 self.status = "P"
-        
+
         elif self.gr_amount != 0:
             self.status = "G"
-        
+
         update_register_entry.update_register_entry_data(self)
-    
+
     def pending_updater(self):
-        self.pending_amount = self.amount - self.gr_amount - self.deduction - self.part_payment
+        self.pending_amount = self.amount - self.gr_amount - \
+            self.deduction - self.partial_amount
 
+    @classmethod
+    def from_dict(cls, data: Dict) -> RegisterEntry:
 
+        # List of attribute names to be converted to integers
+        int_attributes = ["bill_number",
+                          "amount",
+                          "supplier_id",
+                          "party_id",
+                          "gr_amount",
+                          "deduction",
+                          "partial_amount"]
 
-def call(bill: int, amount: int, supplier: Dict, party: Dict,  date: str, *args, **kwargs) -> RegisterEntry:
-    register = RegisterEntry(bill, amount, int(supplier["id"]), int(party["id"]), date)
-    if insert_register_entry.check_new_register(register):
-        insert_register_entry.insert_register_entry(register)
-    return register
+        # Convert the necessary integer attributes from strings to integers
+        for attr in int_attributes:
+            if attr in data:
+                data[attr] = int(data[attr])
 
-def create(bill: int, amount: int, supplier: Dict, party: Dict,  date: str) -> Dict:
-    register = RegisterEntry(bill, amount, int(supplier["id"]), int(party["id"]), date)
-    if insert_register_entry.check_new_register(register):
-        insert_register_entry.insert_register_entry(register)
-        return {"status": "okay"}
-    return {"status": "error", "bill_num": {"error": True, "message": "Duplicate Bill Number"}}
+        return RegisterEntry(**data)
 
-
-def create_instance(data: Dict)  -> RegisterEntry:
-    bill_number = int(data["bill_number"])
-    amount = int(data["amount"])
-    supplier_id = int(data["supplier_id"])
-    party_id = int(data["party_id"])
-    date = data["register_date"]
-
-    register = RegisterEntry(bill_number, amount, supplier_id, party_id, date)
-
-    register.gr_amount = int(data["gr_amount"])
-    register.deduction = int(data["deduction"])
-    register.status = data["status"]
-    register.part_payment = int(data["partial_amount"])
-    return register
-    
-
-
-
-
-
-
-
-
+    @classmethod
+    def add(cls, data: Dict) -> Dict:
+        register_entry = cls.from_dict(data)
+        if insert_register_entry.check_new_register(register_entry):
+            return insert_register_entry.insert_register_entry(register_entry)
+        else:
+            raise DataError({"status": "error",
+                             "message": "Duplicate Bill Number",
+                             "input_errors": {"bill_number": {"status": "error", "message": "Bill number already exists"}}})

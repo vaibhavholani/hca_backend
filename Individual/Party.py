@@ -1,26 +1,21 @@
 """
 === Class Description ===
-The file is supposed to represent a Party
+The file is supposed to represent a Bank
 
 """
 from __future__ import annotations
-from API_Database import insert_individual
+from .Individual import Individual
 from API_Database import retrieve_indivijual
-from typing import Dict
 
-class Party:
+class Party(Individual):
     """
-    The class represents a Party.
+    The class represents a Bank.
 
-    name : The name  of the Party
-    short_name: The short name of the Party
-    address: The address of the Party.
-
+    name : The name  of the Bank
+    address: The address of the Bank.
     """
-
-    def __init__(self, name: str, address: str):
-        self.name = name
-        self.address = address
+    def __init__(self, name: str, address: str, *args, **kwargs):
+        super().__init__(name, address)
     
     @staticmethod
     def get_party_name_by_id(party_id: int) -> str:
@@ -35,8 +30,3 @@ class Party:
         Get party name by ID for report
         """
         return "Party Name: " + retrieve_indivijual.get_party_name_by_id(party_id)
-
-
-def create_party(obj: Dict) -> None:
-
-    return Party(**obj)

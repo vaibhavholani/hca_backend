@@ -1,0 +1,1 @@
+psql -U postgres hca_backup < ~/development/backups/backup_28_Jul_2023.sql

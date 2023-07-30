@@ -10,23 +10,23 @@ class MetaTable:
     
     _preset = {
         "Khata Report": {
-            "header_entity": Party.Party,
-            "subheader_entity": Supplier.Supplier,
+            "header_entity": Party,
+            "subheader_entity": Supplier,
             "data_rows": retrieve_register_entry.get_khata_data_by_date,
             "numeric_columns": ["bill_amt", "memo_amt", "chk_amt"],
             "total_rows_columns": ["bill_amt", "memo_amt",],
             "part_display_mode": "row"},
         "Supplier Register": {
-            "header_entity": Supplier.Supplier,
-            "subheader_entity": Party.Party,
+            "header_entity": Supplier,
+            "subheader_entity": Party,
             "data_rows": retrieve_register_entry.get_supplier_register_data, 
             "numeric_columns": ["bill_amt", "pending_amt"],
             "total_rows_columns": ["bill_amt", "pending_amt"],
             "part_display_mode": "none"
             },
           "Payment List": {
-            "header_entity": Party.Party,
-            "subheader_entity": Supplier.Supplier,
+            "header_entity": Party,
+            "subheader_entity": Supplier,
             "data_rows": retrieve_register_entry.get_payment_list_data, 
             "numeric_columns": ["bill_amt", "part_amt"],
             "total_rows_columns": ["part_amt", "bill_amt"],
@@ -37,14 +37,14 @@ class MetaTable:
         self.title = title
         self.header_entity = self._preset[title]["header_entity"]
         self.subheader_entity = self._preset[title]["subheader_entity"]
-        self.filter_subheader = efficiency.filter_out_parties if self.header_entity is Supplier.Supplier else efficiency.filter_out_supplier
+        self.filter_subheader = efficiency.filter_out_parties if self.header_entity is Supplier else efficiency.filter_out_supplier
         self.data_rows = self._preset[title]["data_rows"]
         self.numeric_columns = self._preset[title]["numeric_columns"]
         self.total_rows_columns = self._preset[title]["total_rows_columns"]
         self.part_display_mode = self._preset[title]["part_display_mode"]
 
         # to auto select header_entity
-        self.header_supplier = True if self.header_entity is Supplier.Supplier else False
+        self.header_supplier = True if self.header_entity is Supplier else False
     
     def generate_total_rows(self, data_rows: Dict, before_data: bool = False):
       """
@@ -88,15 +88,15 @@ class MetaTable:
       # handle the casee when header_ids and subheader_ids are int
       if force_int_args or (isinstance(header_ids, int) and isinstance(subheader_ids, int) and not force_list_args):
         input_args = {
-            "party_id" if self.header_entity is Party.Party else "supplier_id": header_ids,
-            "supplier_id" if self.subheader_entity is Supplier.Supplier else "party_id": subheader_ids,
+            "party_id" if self.header_entity is Party else "supplier_id": header_ids,
+            "supplier_id" if self.subheader_entity is Supplier else "party_id": subheader_ids,
             "start_date": start_date,
             "end_date": end_date
         }
       else: 
         input_args = {
-              "party_ids" if self.header_entity is Party.Party else "supplier_ids": header_ids,
-              "supplier_ids" if self.subheader_entity is Supplier.Supplier else "party_ids": subheader_ids,
+              "party_ids" if self.header_entity is Party else "supplier_ids": header_ids,
+              "supplier_ids" if self.subheader_entity is Supplier else "party_ids": subheader_ids,
               "start_date": start_date,
               "end_date": end_date
           }
@@ -192,10 +192,10 @@ class HeaderTable(MetaTable):
       input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
       register_data = self.data_rows(**input_args)
       # pop "party_name" if header enetity is party and vice versa
-      if self.header_entity is Party.Party:
+      if self.header_entity is Party:
         for register in register_data:
           register.pop("party_name")
-      elif self.header_entity is Supplier.Supplier:
+      elif self.header_entity is Supplier:
         for register in register_data:
           register.pop("supplier_name")
       

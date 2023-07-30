@@ -3,6 +3,7 @@ from psycopg2.extras import (RealDictCursor, )
 import os
 from typing import Tuple
 from dotenv import load_dotenv
+from Exceptions import DataError
 
 
 def connect():
@@ -35,7 +36,7 @@ def cursor(dict = False) -> Tuple:
         db_cursor = database.cursor()
     return database, db_cursor
 
-def execute_query(query: str, dictCursor: bool = True):
+def execute_query(query: str, dictCursor: bool = True, **kwargs):
     """
     Executes a query and returns the result
     """
@@ -43,29 +44,29 @@ def execute_query(query: str, dictCursor: bool = True):
     # Detect query type
     query_type = query.strip().split()[0].upper()
     if query_type not in ["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE"]:
-        raise Exception("Invalid query type")
+        raise DataError("Invalid query type")
     
     try:
         # connecting to database
         db, cur = cursor(dictCursor)
-        
-        # Executing the query and fetching the result
         cur.execute(query)
-        result = cur.fetchall()
+        
+        if query_type != "SELECT":
+            result = []
+        else:
+            result = cur.fetchall()
 
         # Committing the changes if query is not SELECT
         if query_type != "SELECT":
             db.commit()
 
         db.close()
-        result = {"result": result, "status": "okay"}
+        return {"result": result, "status": "okay", "message": "Query executed successfully!"}
+
     except Exception as e:
         print("Error executing query:", e)
-        result = {"result": [], 
-                  "status": "error", 
-                  "message": "Error executing query. Please Contact Vaibhav"}
-    
-    return result
+        raise DataError({"status": "error", "message": f"Error with Query Exexcution: {e}"})
+
 
 def update(): pass
 

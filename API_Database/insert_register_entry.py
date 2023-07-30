@@ -1,6 +1,7 @@
 from __future__ import annotations
-from psql import db_connector
+from psql import execute_query
 from Entities import RegisterEntry
+from pypika import Query, Table
 
 
 def check_new_register(entry: RegisterEntry) -> bool:
@@ -9,14 +10,11 @@ def check_new_register(entry: RegisterEntry) -> bool:
     """
 
     # Open a new connection
-    db, cursor = db_connector.cursor()
 
     query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}'".format(
         entry.bill_number, entry.supplier_id, entry.party_id)
-    cursor.execute(query)
-    data = cursor.fetchall()
-    db.close()
-    if len(data) == 0:
+    response = execute_query(query)
+    if len(response["result"]) == 0:
         return True
     return False
 
@@ -25,17 +23,33 @@ def insert_register_entry(entry: RegisterEntry) -> None:
     """
     Insert a register_entry into the database.
     """
-    # Open a new connection
-    db, cursor = db_connector.cursor()
 
-    sql = "INSERT INTO register_entry (supplier_id, party_id, register_date, amount, bill_number, status, " \
-          "deduction) " \
-          "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-    val = (entry.supplier_id, entry.party_id, str(entry.date), entry.amount, entry.bill_number, entry.status,
-           entry.deduction)
 
-    cursor.execute(sql, val)
-    db_connector.add_stack_val(sql, val)
-    db.commit()
-    db.close()
-    db_connector.update()
+    # Define the table
+    register_entry_table = Table('register_entry')
+
+    # Build the INSERT query using Pypika
+    insert_query = Query.into(register_entry_table).columns(
+        'supplier_id',
+        'party_id',
+        'register_date',
+        'amount',
+        'bill_number',
+        'status',
+        'gr_amount',
+        'deduction'
+    ).insert(
+        entry.supplier_id,
+        entry.party_id,
+        entry.register_date,
+        entry.amount,
+        entry.bill_number,
+        entry.status,
+        entry.gr_amount,
+        entry.deduction
+    )
+
+    # Get the raw SQL query and parameters from the Pypika query
+    sql = insert_query.get_sql()
+    # Execute the query
+    return execute_query(sql)

@@ -3,20 +3,20 @@ from typing import Dict
 from psql import db_connector
 from Individual import Supplier, Party, Bank, Transporter
 
-def add_individual(entity_type, obj):
+def add_individual(obj):
     entity_mapping = {
-        "supplier": Supplier.create_supplier,
-        "party": Party.create_party,
-        "bank": Bank.create_bank,
-        "transporter": Transporter.create_transporter,
+        "supplier": Supplier,
+        "party": Party,
+        "bank": Bank,
+        "transport": Transporter,
     }
-
-    create_entity = entity_mapping.get(entity_type)
-    if create_entity:
-        entity = create_entity(obj)
-        table = entity_type
-        return insert_entity(entity, table)
-    return {"status": "error", "error": f"{table} could not be added. Invalid entity type. Please contact Vaibhav"}
+    table_name = obj["entity"]
+    base_class = entity_mapping.get(table_name)
+    if base_class:
+        cls = base_class.create_individual(obj)
+        table = table_name
+        return insert_entity(cls, table)
+    return {"status": "error", "message": f"{base_class} could not be added. Invalid entity type. Please contact Vaibhav"}
 
 
 def insert_entity(entity, table):
@@ -31,6 +31,6 @@ def insert_entity(entity, table):
         db.commit()
         db.close()
         db_connector.update()
-        return {"status": "okay"}
+        return {"status": "okay", "message": f"{table} added successfully"}
     except Exception as e:
-        return {"status": "error", "error": f"{table} could not be added. Please contact Vaibhav."}
+        return {"status": "error", "message": f"Error: {e}"}
