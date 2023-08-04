@@ -7,7 +7,7 @@ def parse_date(date_string):
         return date_string
     
     try:
-        parsed_date = parser.parse(date_string)
+        parsed_date = parser.parse(date_string, dayfirst=True)
         return parsed_date
     except Exception as e:
         print("Error parsing date:", e)
