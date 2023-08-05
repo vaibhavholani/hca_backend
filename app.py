@@ -49,6 +49,8 @@ def create_token():
     return jsonify(access_token=access_token)
 
 # Error Handler
+
+
 @app.errorhandler(DataError)
 def handle_data_error(e):
     error = e.dict()
@@ -89,7 +91,7 @@ def get_credit(supplier_id: int, party_id: int):
 
 @app.route(BASE + '/pending_bills/<int:supplier_id>/<int:party_id>', methods=['GET'])
 def get_pending_bills(supplier_id: int, party_id: int):
-    data = retrieve_register_entry.get_pending_bill_numbers(
+    data = retrieve_register_entry.get_pending_bills(
         supplier_id, party_id)
     json_data = json.dumps(data)
     return json_data
@@ -115,9 +117,10 @@ def create_report():
 def add_individual():
     return insert_individual.add_individual(request.json)
 
+
 @app.route(BASE + '/add/register_entry', methods=['POST'])
 def add_register_entry():
-    data = request.json 
+    data = request.json
     response = RegisterEntry.insert(data)
     return jsonify(response)
 

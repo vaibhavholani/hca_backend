@@ -46,19 +46,16 @@ def check_unique_bill_number(supplier_id: int, party_id: int, bill_number: int, 
     return False
 
 
-def get_pending_bill_numbers(supplier_id: int, party_id: int) -> List[int]:
+def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
     """
     Returns a list of all pending bill numbers between party and supplier.
     """
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
 
     query = "select id, bill_number, status, CAST(floor(partial_amount) AS INTEGER) as partial_amount, CAST(floor(amount) AS INTEGER) as amount, gr_amount, deduction from register_entry where supplier_id = '{}' AND party_id = '{}' AND status != '{}'".\
         format(supplier_id, party_id, "F")
-    cursor.execute(query)
-    data = cursor.fetchall()
-    db.close()
-    return data
+    response = execute_query(query)
+    result = response["result"]
+    return result
 
 
 def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> Dict:

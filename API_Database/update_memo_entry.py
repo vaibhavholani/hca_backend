@@ -1,12 +1,12 @@
 from __future__ import annotations
+from psql import db_connector
+from API_Database import update_partial_amount, update_register_entry
+from API_Database import retrieve_memo_entry, retrieve_register_entry
+import datetime
+from typing import Dict
+from Entities import MemoEntry
 import sys
 sys.path.append("../")
-from Entities import MemoEntry
-from typing import Dict
-import datetime
-from API_Database import retrieve_memo_entry, retrieve_register_entry
-from API_Database import update_partial_amount, update_register_entry
-from psql import db_connector
 
 
 def update_memo_entry_data(entry: MemoEntry) -> None:
@@ -16,7 +16,8 @@ def update_memo_entry_data(entry: MemoEntry) -> None:
     # Open a new connection
     db, cursor = db_connector.cursor()
 
-    entry_id = retrieve_memo_entry.get_id_by_memo_number(entry.memo_number, entry.supplier_id, entry.party_id)
+    entry_id = retrieve_memo_entry.get_memo_entry_id(
+        entry.memo_number, entry.supplier_id, entry.party_id)
 
     if entry.mode != "Good Return":
         query = "UPDATE memo_entry SET amount = amount + '{}' " \
@@ -34,12 +35,12 @@ def update_memo_entry_data(entry: MemoEntry) -> None:
 
 def delete_memo_bill(id: int):
     types = {
-    "P" : "part_payment", 
-    "F" : "Full Payment", 
-    "G" : "gr_amount", 
-    "C" : "Credit Payment",
-    "D" : "deduction", 
-    "PG": "MISC"}
+        "P": "part_payment",
+        "F": "Full Payment",
+        "G": "gr_amount",
+        "C": "Credit Payment",
+        "D": "deduction",
+        "PG": "MISC"}
 
     # Open a new connection
     db, cursor = db_connector.cursor(True)
@@ -51,20 +52,21 @@ def delete_memo_bill(id: int):
     data = cursor.fetchall()
     data = data[0]
 
-    re = retrieve_register_entry.get_register_entry(data["supplier_id"], data["party_id"], data["bill_number"])[0]
+    re = retrieve_register_entry.get_register_entry(
+        data["supplier_id"], data["party_id"], data["bill_number"])[0]
 
     type = data["type"]
 
     if type == "F":
         re.status_updater()
     elif type == "C":
-        update_partial_amount.use_partial_amount(data["supplier_id"], data["party_id"], data["amount"])
-    else: 
+        update_partial_amount.use_partial_amount(
+            data["supplier_id"], data["party_id"], data["amount"])
+    else:
         temp = getattr(re, types[type])
         setattr(re, types[type], (temp-data["amount"]))
         re.status_updater()
         update_register_entry.update_register_entry_data(re)
-    
 
     query = f"delete from memo_bills where id = {id}"
     cursor.execute(query)
@@ -75,9 +77,10 @@ def delete_memo_bill(id: int):
     db.commit()
     db.close()
 
+
 def delete_memo_payments(id: int):
 
-      # Open a new connection
+    # Open a new connection
     db, cursor = db_connector.cursor(True)
 
     query = f"delete from memo_payments where memo_id = {id}"
@@ -86,6 +89,7 @@ def delete_memo_payments(id: int):
 
     db.commit()
     db.close()
+
 
 def update_memo_amount(id: int, custom_amount: int = 0):
 
@@ -98,15 +102,14 @@ def update_memo_amount(id: int, custom_amount: int = 0):
 
     data = cursor.fetchall()
 
-    amount = 0 
+    amount = 0
 
     for bills in data:
 
         if bills["type"] in ['D', 'G', 'C']:
             pass
-        else: 
+        else:
             amount += bills["amount"]
-
 
     if custom_amount != 0:
         amount = custom_amount
@@ -116,27 +119,27 @@ def update_memo_amount(id: int, custom_amount: int = 0):
 
     db.commit()
     db.close()
-    
+
 
 def update_memo_entry_from_obj(data: Dict):
 
-     # Open a new connection
+    # Open a new connection
     db, cursor = db_connector.cursor(True)
 
     memo_number = int(data["memo_number"])
     supplier_id = int(data['supplier_id'])
     party_id = int(data['party_id'])
-    register_date = (datetime.datetime.strptime(data['register_date'], "%Y-%m-%d"))
+    register_date = (datetime.datetime.strptime(
+        data['register_date'], "%Y-%m-%d"))
     memo_id = int(data["id"])
 
     query = f"UPDATE memo_entry SET memo_number = {memo_number}, supplier_id={supplier_id}, party_id = {party_id}, register_date='{register_date}' where id={memo_id}"
-    
-    
-    try: 
+
+    try:
         cursor.execute(query)
-    except: 
+    except:
         return {"status": "error", "message": "Could not update Memo Entry. Please contact Vaibhav"}
-    
+
     db.commit()
     db.close()
 

@@ -14,9 +14,9 @@ def insert_memo_entry(entry: MemoEntry) -> Dict:
     status = insert_memo(entry)
 
     # Get Memo ID
-    memo_id = retrieve_memo_entry.get_id_by_memo_number(entry.memo_number,
-                                                        entry.supplier_id,
-                                                        entry.party_id)
+    memo_id = retrieve_memo_entry.get_memo_entry_id(entry.memo_number,
+                                                    entry.supplier_id,
+                                                    entry.party_id)
 
     # Insert Memo Bills
     for bill in entry.memo_bills:

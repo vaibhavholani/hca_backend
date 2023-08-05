@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 from API_Database import insert_register_entry, update_register_entry, utils
 from API_Database import get_register_entry_id, get_register_entry
+from API_Database import get_pending_bills
 from Exceptions import DataError
 from Entities import Entry
 
@@ -83,6 +84,11 @@ class RegisterEntry(Entry):
         return get_register_entry_id(self.supplier_id,
                                     self.party_id, 
                                     self.bill_number,)
+    
+    @staticmethod
+    def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
+        pending_bills_data = get_pending_bills(supplier_id, party_id)
+        return pending_bills_data
 
     @classmethod
     def from_dict(cls, data: Dict) -> RegisterEntry:
