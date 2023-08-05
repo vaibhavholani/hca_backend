@@ -11,7 +11,7 @@ from .RegisterEntry import RegisterEntry
 from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
-from API_Database import retrieve_memo_entry
+from API_Database import retrieve_memo_entry, get_memo_entry_id
 from API_Database import parse_date
 from Exceptions import DataError
 
@@ -53,9 +53,9 @@ class MemoEntry(Entry):
                  amount: int,
                  mode: str,
                  register_date: Union[str, datetime],
-                 selected_bills: List[int],
-                 payment: List[Dict[Union[int, str]]],
-                 selected_part: List[Dict[int]],
+                 selected_bills: List[int] = [],
+                 payment: List[Dict[Union[int, str]]] = [],
+                 selected_part: List[Dict[int]] = [],
                  gr_amount: int = 0,
                  deduction: int = 0,
                  table_name: str = "memo_entry",
@@ -165,6 +165,11 @@ class MemoEntry(Entry):
                     # create a memo bill
                     self.memo_bills.append(memo_bill)
 
+    def get_id(self) -> int:
+        return get_memo_entry_id(self.supplier_id,
+                                    self.party_id, 
+                                    self.memo_number)
+    
     @staticmethod
     def check_new(memo_number: int,
                   register_date: Union[str, datetime], 
@@ -180,23 +185,24 @@ class MemoEntry(Entry):
     def from_dict(cls, data: Dict) -> MemoEntry:
         # List of attribute names to be converted to integers
         int_attributes = ["memo_number",
-                          "supplier_id",
-                          "party_id",
-                          "amount",
-                          "selected_bills",
-                          "gr_amount",
-                          "deduction"]
+                            "supplier_id",
+                            "party_id",
+                            "amount",
+                            "selected_bills",
+                            "gr_amount",
+                            "deduction"]
         
         # parse selected bills to only have "id"
-        breakpoint()
-        data["selected_bills"] = [int(bill["bill_number"]) for bill in data["selected_bills"]]
+        if "selected_bills" in data:
+            data["selected_bills"] = [int(bill["bill_number"]) for bill 
+                                      in data["selected_bills"]]
 
         data = cls.convert_int_attributes(data, int_attributes)
 
         return cls(**data)
 
     @classmethod
-    def insert(cls, data: Dict) -> Dict:
+    def insert(cls, data: Dict, get_cls: bool=False) -> Dict:
         """
         Adds a memo to the database
         """
@@ -213,4 +219,9 @@ class MemoEntry(Entry):
         memo.generate_memo_bills_and_update_status()
 
         # Insert Memo into the database
-        return insert_memo_entry.insert_memo_entry(memo)
+        ret = insert_memo_entry.insert_memo_entry(memo)
+        if get_cls:
+            if get_cls and ret["status"] == "okay":
+                ret["class"] = memo
+
+        return ret
