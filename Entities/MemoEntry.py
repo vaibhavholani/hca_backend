@@ -5,19 +5,18 @@ This class is used to represent a memo entry.
 """
 
 from __future__ import annotations
-from typing import List, Dict
-import datetime
+from typing import List, Dict, Union
+from datetime import datetime
+from .RegisterEntry import RegisterEntry
+from .Entry import Entry
+from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
 from API_Database import retrieve_memo_entry
-from API_Database import retrieve_partial_payment, insert_partial_payment
-from API_Database import  update_memo_entry, update_partial_amount, update_register_entry
-from API_Database import retrieve_register_entry
-from Entities import RegisterEntry, MemoBill
+from API_Database import parse_date
+from Exceptions import DataError
 
-class DuplicateMemoNumber(Exception):
-    pass
 
-class MemoEntry:
+class MemoEntry(Entry):
 
     """
     A class that represents a memo entry
@@ -29,221 +28,189 @@ class MemoEntry:
 
     """
     memo_number: int
-    supplier_name: str
-    party_name: str
+    supplier_id: int
+    party_id: int
     amount: int
-    date: datetime
-    bank_name: str
-    cheque_number: int
-    selected_bills: List
+    gr_amount: int
+    deduction: int
+    mode: str
+    register_date: datetime
+    selected_bills: List[RegisterEntry]
+    payment: List[Dict[Union[int, str]]]
+    part_payment: List[int]
 
-    def __init__(self, obj: Dict) -> None:
+    _report_attribute_mapping = {
+    "memo_number": "memo_no",
+    "register_date": "memo_date",
+    "amount": "chk_amt",
+    "type": "memo_type"
+}
 
-        self.memo_number = int(obj["memo_number"])
-        self.supplier_id = int(obj['supplier_id'])
-        self.party_id = int(obj['party_id'])
-        self.amount = int(obj['amount'])
-        self.mode = obj["memo_type"]
-        self.allow_duplicate_memo_number = bool(obj["allow_duplicate_memo_number"]) if "allow_duplicate_memo_number" in obj else False
-        self.date = (datetime.datetime.strptime(obj['memo_date'], "%Y-%m-%d"))
-        self.date_string = self.date
-        self.payment_info =[(info["id"], (info["cheque"])) for info in (obj['payment'])] 
-        self.selected_part = [int(memo_id) for memo_id in obj["selected_part"]]
-        print(f"This is selected part: {self.selected_part}")
-        selected_bills = [int(bill["bill_number"]) for bill in obj["selected_bills"]]
-        self.selected_bills = retrieve_register_entry.get_register_entry_bill_numbers\
-            (self.supplier_id, self.party_id, selected_bills)
-        self.insert_memo_database()
-        self.memo_id = self.get_memo_id()
-        self.credit = int(obj["credit"]) if "credit" in obj else 0
-        self.deduction = int(obj["deduction"]) if "deduction" in obj else 0
+    def __init__(self,
+                 memo_number: int,
+                 supplier_id: int,
+                 party_id: int,
+                 amount: int,
+                 mode: str,
+                 register_date: Union[str, datetime],
+                 selected_bills: List[int],
+                 payment: List[Dict[Union[int, str]]],
+                 selected_part: List[Dict[int]],
+                 gr_amount: int = 0,
+                 deduction: int = 0,
+                 table_name: str = "memo_entry",
+                 *args,
+                 **kwargs
+                 ) -> None:
+
+        super().__init__(table_name=table_name,*args, **kwargs)
+
+        self.memo_number = memo_number
+        self.supplier_id = supplier_id
+        self.party_id = party_id
+        self.amount = amount
+        self.register_date = parse_date(register_date)
+        self.gr_amount = gr_amount
+        self.deduction = deduction
+
+        self.mode = mode
+        self.selected_bills = \
+            RegisterEntry.retrieve(
+                self.supplier_id,
+                self.party_id,
+                selected_bills)
         
+        self.payment = [
+            {"bank_id": int(info["id"]),
+             "cheque_number": int(info["cheque"])}
+            for info in (payment)]
 
+        self.part_payment = [int(memo_id) for memo_id in selected_part]
 
-    def insert_memo_database(self) -> None:
-        """
-        Adds memo to the database if the memo is new.
-        """
-        if retrieve_memo_entry.check_add_memo(self.memo_number, self.date_string):
-            insert_memo_entry.insert_memo_entry(self)
-        elif not self.allow_duplicate_memo_number: 
-            raise DuplicateMemoNumber("Duplicate Memo Number")
-        # else:
-        #     update_memo_entry.update_memo_entry_data(self)
-        
-
-    def insert_memo_bill_database(self, bills: RegisterEntry) -> None:
-        """
-        Adds bills to the attached memo to the database.
-        """
-        bills.pending_updater()
-        update_register_entry.update_register_entry_data(bills)
-        amount = self.amount
-        if self.mode == "Full":
-            amount = bills.pending_amount
-        
-        call_dict = {"memo_id": self.memo_id, 
-                     "bill_number": bills.bill_number,
-                     "amount": amount,
-                     "memo_type": self.mode[0].upper()
-                     }
-        MemoBill.call(call_dict)
-
-    def get_memo_id(self) -> int:
-        """
-        Update memo id once the memo is added into the database.
-        """
-        return retrieve_memo_entry.get_id_by_memo_number(self.memo_number, self.supplier_id, self.party_id)
+        # Memo Bills
+        self.memo_bills = []
 
     def full_payment(self) -> None:
         """
         Used to complete full payment for bill(s)
         """
-        # Loop to update the status of the selected bills
-        for bills in self.selected_bills:
-            if self.deduction > 0:
-                if bills.pending_amount <= self.deduction: 
-                    bills.deduction += bills.pending_amount
-                    self.deduction -= bills.pending_amount
-                    self.database_memo_bill(bills.bill_number, bills.pending_amount, "D")
-                else: 
-                    bills.deduction += self.deduction
-                    self.database_memo_bill(bills.bill_number, self.deduction, "D")
-                    self.deduction = 0
-                    
-            bills.status = "F"
-            self.insert_memo_bill_database(bills)
+        # auto assign gr_amount and deduction
+        self._auto_assign("gr_amount")
+        self._auto_assign("deduction")
 
-    def partial_payment_bill(self) -> None:
-        """
-        Used to complete partial payment for bill(s)
-        """
+        # set bills status to F
+        for bill in self.selected_bills:
+            bill.status = "F"
+            pending_amount = bill.get_pending_amount()
+            # Add Memo Bills
+            self.memo_bills.append(
+                MemoBill(bill.bill_number,
+                         pending_amount,
+                         "F")
+            )
 
-        # Loop to update the status of the selected bills
-
-        for bills in self.selected_bills:
-
-            # Updating Bill Status
-            if (bills.pending_amount - self.amount <= 0):
-                bills.status = "F"
-            elif bills.status == "N":
-                bills.status = "P"
-            elif bills.status == "G":
-                bills.status = "PG"
-            
-            # Updating deductions  
-            if self.deduction > 0:
-                bills.deduction += self.deduction
-                self.database_memo_bill(bills.bill_number, self.deduction, "D")
-                self.deduction = 0
-            
-            # Updating Part payments
-            bills.part_payment = bills.part_payment + self.amount
-            self.insert_memo_bill_database(bills)
-
-    def database_memo_bill(self, bill_number: int, deduct_amount: int, type: str = 'D'): 
-        """
-        Store the deductions made in a memo bill
-        """
-        call_dict = {"memo_id": self.memo_id, 
-                     "bill_number": bill_number,
-                     "amount": deduct_amount,
-                     "memo_type": type
-                     }
-        MemoBill.call(call_dict)
-
+            # update register entry data
+            bill.update()
 
     def database_partial_payment(self):
         """
         Store partial payments into the database
         """
-        # if retrieve_partial_payment.get_partial_payment(self.supplier_id, self.party_id) == -1:
-        #     insert_partial_payment.insert_partial_payment(self)
-        # else:
-        #     update_partial_amount.add_partial_amount(self.supplier_id, self.party_id, self.amount)
 
-        # Insert a part memo
-        insert_memo_entry.insert_part_memo(self)
-        
-        # add a memo bill with bill number -1
-        call_dict = {"memo_id": self.memo_id, 
-                     "bill_number": -1,
-                     "amount": self.amount,
-                     "memo_type": "PR"
-                     }
-        MemoBill.call(call_dict)
+        # Add Memo bill
+        self.memo_bills.append(
+            MemoBill(-1,
+                     self.amount,
+                     "PR")
+        )
 
-    def goods_return(self) -> None:
-        """
-        Adds goods return to supplier party account.
-        """
-
-        balance = self.amount
-        for bills in self.selected_bills:
-            if balance > 0: 
-                if (bills.status == "P" or bills.status == "PG"):
-                    bills.status = "PG"
-                elif bills.status == "N":
-                    bills.status = "G"
-
-                if bills.pending_amount >= balance: 
-                    bills.gr_amount += balance
-                    self.database_memo_bill(bills.bill_number, balance, 'G')
-                    balance = 0
-                else: 
-                    bills.gr_amount += bills.pending_amount
-                    balance -= bills.pending_amount
-                    self.database_memo_bill(bills.bill_number, bills.pending_amount, "G")
-                
-                update_register_entry.update_register_entry_data(bills)
-
-    def insert(self):
+    def generate_memo_bills_and_update_status(self):
         """
         Insert the memo entry into the database
         """
         if self.mode == "Full":
             self.full_payment()
 
-        # TODO: Partial is now outdated
-        elif self.mode == "Partial":
-                self.partial_payment_bill()
         elif self.mode == "Part":
-                self.database_partial_payment()
-        elif self.mode == "Goods Return": 
-            self.goods_return()
+            self.database_partial_payment()
+
+    def _auto_assign(self, attr_name: str) -> None:
+        """
+        Automatically assign the amount to the selected bill
+        """
+        assign_amount = getattr(self, attr_name)
+        for bill in self.selected_bills:
+            pending_amount = bill.get_pending_amount()
+
+            if assign_amount != 0:
+                if pending_amount >= assign_amount:
+                    # Assign the whole amount
+                    used_amount = assign_amount
+                    assign_amount = 0
+                else:
+                    # Assign the pending amount
+                    used_amount = pending_amount
+                    assign_amount -= pending_amount
+
+                # update register entry data
+                if used_amount != 0:
+                    bill_previous_amount = getattr(bill, attr_name)
+                    bill_new_amount = bill_previous_amount + used_amount
+                    setattr(bill, attr_name, bill_new_amount)
+
+                    # create memo bill
+                    memo_bill = MemoBill(bill.bill_number,
+                                used_amount,
+                                attr_name[0].upper())
+                    # create a memo bill
+                    self.memo_bills.append(memo_bill)
+
+    @staticmethod
+    def check_new(memo_number: int,
+                  register_date: Union[str, datetime], 
+                  *args, 
+                  **kwargs) -> bool:
+
+        memo_number = int(memo_number)
+        register_date = parse_date(register_date)
+        return retrieve_memo_entry.check_new_memo(memo_number,
+                                                  register_date)
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> MemoEntry:
+        # List of attribute names to be converted to integers
+        int_attributes = ["memo_number",
+                          "supplier_id",
+                          "party_id",
+                          "amount",
+                          "selected_bills",
+                          "gr_amount",
+                          "deduction"]
         
-        if len(self.selected_part) > 0:
-            for memo_id in self.selected_part:
-                print(" I am inside select part")
-                update_partial_amount.update_part_payment(self.supplier_id, self.party_id, memo_id=memo_id, use_memo_id=self.memo_id)
+        # parse selected bills to only have "id"
+        breakpoint()
+        data["selected_bills"] = [int(bill["bill_number"]) for bill in data["selected_bills"]]
 
-        # TODO: FIX THIS
-        # Right now this is a work around for when I call memo entry object to make the
-        # gr hack work. The reason why I did not update memo amount multiple times 
-        # before becuase memo amount did not represent the actual memo amount 
-        # since a person could fill in a memo in multiple iterations.
-        # For now I have stopped that feature and in the limited case, 
-        # This one should work.
-        update_memo_entry.update_memo_amount(self.memo_id, custom_amount=self.amount
-                                             )
+        data = cls.convert_int_attributes(data, int_attributes)
 
-        # inserting memo payment information
-        insert_memo_entry.insert_memo_payemts(self)
-            
-def call(obj: Dict):
+        return cls(**data)
 
-    memo_number = int(obj["memo_number"])
-    supplier_id = int(obj['supplier_id'])
-    party_id = int(obj['party_id'])
-    date = (datetime.datetime.strptime(obj['memo_date'], "%Y-%m-%d"))
+    @classmethod
+    def insert(cls, data: Dict) -> Dict:
+        """
+        Adds a memo to the database
+        """
+        #  Check for valid memo number
+        if not cls.check_new(**data):
+            return {
+                "status": "error",
+                "message": "Duplicate memo number",
+                "input_errors": {"memo_number": {"error": True, "message": "Duplicate memo number"}}
+            }
 
-    if not (retrieve_memo_entry.check_new_memo(memo_number, date, supplier_id, party_id)):
-        return {"status": "error", "memo_number": {"error": True, "message": "Duplicate memo Number for different supplier and party OR memo number for already exists for the same supplier and party on a different date "}}
-    else: 
-        try:
-            memo = MemoEntry(obj)
-        except DuplicateMemoNumber:
-            return {"status": "error", "memo_number": {"error": True, "message": "Duplicate memo Number for same supplier and party"}}
-        
-        memo.insert()
-        return {"status": "okay"}
+        memo = cls.from_dict(data)
+        # Generate Memo Bills and Update the status of the bills
+        memo.generate_memo_bills_and_update_status()
+
+        # Insert Memo into the database
+        return insert_memo_entry.insert_memo_entry(memo)

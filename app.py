@@ -49,8 +49,6 @@ def create_token():
     return jsonify(access_token=access_token)
 
 # Error Handler
-
-
 @app.errorhandler(DataError)
 def handle_data_error(e):
     error = e.dict()
@@ -97,17 +95,6 @@ def get_pending_bills(supplier_id: int, party_id: int):
     return json_data
 
 
-@app.route(BASE + '/add/register_entry', methods=['POST'])
-def add_register_entry():
-    data = request.json  # Get the JSON data from the request body
-    print(request.json)
-
-
-    # Assuming RegisterEntry.create returns a response in JSON format
-    response = RegisterEntry.add(data)
-    return jsonify(response)
-
-
 @app.route(BASE + '/create_report', methods=['POST'])
 def create_report():
     if request.method == "POST":
@@ -126,27 +113,20 @@ def create_report():
 
 @app.route(BASE + '/add/individual', methods=['POST'])
 def add_individual():
-
     return insert_individual.add_individual(request.json)
-    raise DataError({"status": "error", "message": "This is a test error",
-                     "input_errors": {"name": {
-                         "error": True, "message": "Bill number already exists"}}})
+
+@app.route(BASE + '/add/register_entry', methods=['POST'])
+def add_register_entry():
+    data = request.json 
+    response = RegisterEntry.insert(data)
+    return jsonify(response)
 
 
-@app.route(BASE + '/add/memo_entry/<string:obj>')
-def add_memo_entry(obj: str):
-    obj = json.loads(obj)
-    # check if obj contains the key "memo_gr_amount"
-    if "memo_gr_amount" in obj:
-        # create a new version of obj (keep all old properties) but "amount" is replaced by memo_gr_amount and "memo_type" is set to "gr"
-        gr_obj = {
-            **obj, "amount": obj["memo_gr_amount"], "memo_type": "Goods Return"}
-        # allowing duplicate memo_number for the second iteration of memo_entry
-        obj = {**obj, "allow_duplicate_memo_number": True}
-        gr_return = MemoEntry.call(gr_obj)
-        if gr_return["status"] == "error":
-            return gr_return
-    return MemoEntry.call(obj)
+@app.route(BASE + '/add/memo_entry', methods=['POST'])
+def add_memo_entry():
+    data = request.json
+    response = MemoEntry.insert(data)
+    return jsonify(response)
 
 
 @app.route(BASE + '/add_legacy')

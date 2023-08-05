@@ -8,6 +8,12 @@ import datetime
 
 def make_report(select, supplier_ids, party_ids, start_date, end_date):
 
+    # if supplier_ids or party_ids are ints, convert them to lists
+    if isinstance(supplier_ids, int):
+        supplier_ids = [supplier_ids]
+    if isinstance(party_ids, int):
+        party_ids = [party_ids]
+    
     options = ["khata_report", "supplier_register", "payment_list", "payment_list_summary", "grand_total_list", "legacy_payment_list" ]
     start_date = (datetime.datetime.strptime(start_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
     end_date = (datetime.datetime.strptime(end_date, "%Y-%m-%d")).strftime('%d/%m/%Y')

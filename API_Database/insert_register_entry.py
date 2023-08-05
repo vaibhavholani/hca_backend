@@ -1,10 +1,9 @@
 from __future__ import annotations
 from psql import execute_query
-from Entities import RegisterEntry
 from pypika import Query, Table
 
 
-def check_new_register(entry: RegisterEntry) -> bool:
+def check_new_register(entry) -> bool:
     """
     Check if the register_entry already exists.
     """
@@ -19,12 +18,11 @@ def check_new_register(entry: RegisterEntry) -> bool:
     return False
 
 
-def insert_register_entry(entry: RegisterEntry) -> None:
+def insert_register_entry(entry) -> None:
     """
     Insert a register_entry into the database.
     """
-
-
+    
     # Define the table
     register_entry_table = Table('register_entry')
 

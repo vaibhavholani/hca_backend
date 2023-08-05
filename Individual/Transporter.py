@@ -1,6 +1,6 @@
 """
 === Class Description ===
-The file is supposed to represent a Bank
+The file is supposed to represent a Transporter
 
 """
 from __future__ import annotations
@@ -9,12 +9,13 @@ from .Individual import Individual
 
 class Transporter(Individual):
     """
-    The class represents a Bank.
+    The class represents a Transporter.
 
-    name : The name  of the Bank
-    address: The address of the Bank.
+    name : The name  of the Transporter
+    address: The address of the Transporter.
 
     """
 
+    table_name = "transport"
     def __init__(self, name: str, address: str, *args, **kwargs):
-        super().__init__(name, address)
+        super().__init__(name, address, self.table_name)

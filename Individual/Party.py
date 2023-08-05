@@ -1,6 +1,6 @@
 """
 === Class Description ===
-The file is supposed to represent a Bank
+The file is supposed to represent a Party
 
 """
 from __future__ import annotations
@@ -9,13 +9,15 @@ from API_Database import retrieve_indivijual
 
 class Party(Individual):
     """
-    The class represents a Bank.
+    The class represents a Party.
 
-    name : The name  of the Bank
-    address: The address of the Bank.
+    name : The name  of the Party
+    address: The address of the Party.
     """
+    table_name = "party"
+
     def __init__(self, name: str, address: str, *args, **kwargs):
-        super().__init__(name, address)
+        super().__init__(name, address, table_name=self.table_name)
     
     @staticmethod
     def get_party_name_by_id(party_id: int) -> str:

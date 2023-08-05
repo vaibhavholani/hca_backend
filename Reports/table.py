@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import List, Dict, Union
+from datetime import datetime
 from Individual import Supplier, Party
 from API_Database import efficiency
 from API_Database import retrieve_register_entry, retrieve_partial_payment
@@ -122,6 +123,10 @@ class MetaTable:
           merged_dict = {**dict_a_i, **dict_b_i}
           merged_dicts.append(merged_dict)
       return merged_dicts
+    
+    @staticmethod
+    def _format_date(date: datetime) -> str:
+        return date.strftime("%d/%m/%Y")
 
 
 class HeaderSubheaderTable(MetaTable):

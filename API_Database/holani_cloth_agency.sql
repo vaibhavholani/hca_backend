@@ -45,12 +45,12 @@ CREATE TABLE register_entry (
 	supplier_id INT,
 	party_id INT, 
 	register_date TIMESTAMP(0),
-	amount DECIMAL(10, 2),
+	amount INT,
 	bill_number INT,
 	gr_amount INT DEFAULT 0,
 	deduction INT DEFAULT 0,
 	status VARCHAR(2) DEFAULT 'N',
-	partial_amount DECIMAL(10,2) DEFAULT 0,
+	partial_amount INT DEFAULT 0,
 	UNIQUE (bill_number, supplier_id, party_id, register_date),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (party_id) REFERENCES party(id),
@@ -65,9 +65,11 @@ CREATE TABLE memo_entry(
 	supplier_id INT,
 	party_id INT, 
 	register_date TIMESTAMP(0),
+	amount INT default 0,
+	gr_amount INT default 0,
+	deduction INT default 0,
 	UNIQUE (memo_number, party_id, supplier_id, register_date),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-	amount INT default 0,
 	FOREIGN KEY (party_id) REFERENCES party(id),
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 	);
@@ -95,31 +97,6 @@ CREATE TABLE memo_bills (
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (memo_id) REFERENCES memo_entry(id)
 );
-
-CREATE TABLE gr_settle(
-	supplier_id INT,
-	party_id INT, 
-	start_date TIMESTAMP(0),
-	end_date TIMESTAMP(0),
-	settle_amount INT,
-	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (party_id) REFERENCES party(id),
-	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
-);
-
-CREATE SEQUENCE supplier_party_account_seq;
-
-CREATE TABLE supplier_party_account(
-    id INT DEFAULT NEXTVAL ('supplier_party_account_seq') PRIMARY KEY,
-	supplier_id INT,
-	party_id INT,
-	partial_amount INT DEFAULT 0,
-	gr_amount DECIMAL(10, 2) DEFAULT 0,
-	UNIQUE(supplier_id, party_id),
-	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (party_id) REFERENCES party(id),
-	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
-	);
 
 CREATE SEQUENCE part_payment_seq;
 

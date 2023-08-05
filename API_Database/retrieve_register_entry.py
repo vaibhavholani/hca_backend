@@ -1,11 +1,10 @@
 from __future__ import annotations
-from typing import List, Union, Tuple
-from Entities import RegisterEntry
-from psql import db_connector
+from typing import List, Union, Tuple, Dict
+from psql import db_connector, execute_query
 from API_Database.utils import parse_date
 from datetime import datetime, timedelta
 from pypika import Query, Table, Field, functions as fn
-
+from Exceptions import DataError
 
 def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int) -> int:
     """
@@ -62,61 +61,47 @@ def get_pending_bill_numbers(supplier_id: int, party_id: int) -> List[int]:
     return data
 
 
-def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> RegisterEntry:
+def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> Dict:
     """
-    Return the register entry associated with given bill number
-    """
-    # Open a new connection
-    db, cursor = db_connector.cursor()
-
-    # Getting data from the database for each bill number
-    query = "select to_char(register_date, 'DD/MM/YYYY'), amount, partial_amount, status, deduction, gr_amount " \
-            "from register_entry where " \
-            "bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}'". \
-        format(bill_number, supplier_id, party_id)
-    cursor.execute(query)
-    data = cursor.fetchall()
-
-    r_list = []
-    for entries in data:
-        # make register entries
-        reference = entries
-
-        # Setting variables
-        amount = int(reference[1])
-        date = str(reference[0])
-        part_amount = int(reference[2])
-        status = reference[3]
-        deduction = int(reference[4])
-        gr_amount = int(reference[5])
-
-        # creating register entry
-        re_curr = RegisterEntry.RegisterEntry(bill_number, amount, supplier_id, party_id, date)
-        re_curr.part_payment = part_amount
-        re_curr.status = status
-        re_curr.deduction = deduction
-        re_curr.gr_amount = gr_amount
-        r_list.append(re_curr)
-
-    db.close()
-
-    return r_list
-
-
-def get_register_entry_bill_numbers(supplier_id: int, party_id: int, bill_number: List[int]) -> List:
-    """
-    Returns register_entries with the given bill_number(s)
+    Return the register entry associated with the given bill number.
     """
 
-    re_by_bill = []
+    # Define the table
+    register_entry_table = Table('register_entry')
 
-    for bill_num in bill_number:
+    # Build the SELECT query using Pypika
+    select_query = Query.from_(register_entry_table).select(
+        register_entry_table.supplier_id,
+        register_entry_table.party_id,
+        register_entry_table.bill_number,
+        register_entry_table.register_date,
+        register_entry_table.amount,
+        register_entry_table.partial_amount,
+        register_entry_table.status,
+        register_entry_table.deduction,
+        register_entry_table.gr_amount
+    ).where(
+        (register_entry_table.bill_number == bill_number) &
+        (register_entry_table.supplier_id == supplier_id) &
+        (register_entry_table.party_id == party_id)
+    )
 
-        re_curr = get_register_entry(supplier_id, party_id, bill_num)
-        # adding it to the list
-        re_by_bill = re_by_bill + re_curr
+    # Get the raw SQL query from the Pypika query
+    sql= select_query.get_sql()
 
-    return re_by_bill
+    # Execute the query and fetch data from the database
+    data = execute_query(sql)
+
+    # Convert the fetched data into a list of RegisterEntry objects
+    result = data["result"]
+
+    if len(result) == 0:
+        raise DataError(f"No Register Entry with bill number: {bill_number}")
+
+    if len(result) != 1:
+        raise DataError(f"Multiple Register Entries with same bill number: {bill_number}")
+    
+    return result[0]
 
 def _pop_dict_keys(pop_dict: dict, keys: List[str]) -> dict:
     """
@@ -132,21 +117,20 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     """
 
     data = []
-
-    table_header = ("Bill No.", "Bill Date", "Bill Amt",
-                    "Status", "Memo No.", "Memo Amt", "Memo Date", "M.Type", "Chk. Amt")
-
     start_date = str(parse_date(start_date))
     end_date = str(parse_date(end_date))
+    # start_date = start_date.strftime('%Y-%m-%d')
+    # end_date = end_date.strftime('%Y-%m-%d')
+
 
     query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
-            "register_entry.amount as bill_amt, register_entry.status as bill_status " \
+            "register_entry.amount::integer as bill_amt, register_entry.status as bill_status " \
             "from register_entry " \
             "where party_id = '{}' AND supplier_id = '{}' AND " \
             "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;"\
         .format(party_id, supplier_id, start_date, end_date)
 
-    result = db_connector.execute_query(query)
+    result = execute_query(query)
     bills_data = result["result"]
 
     if len(bills_data) == 0:
@@ -161,7 +145,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
                   "where memo_bills.bill_number = '{}' AND memo_entry.supplier_id = '{}' " \
                   "AND memo_entry.party_id = '{}'; " \
             .format(bills["bill_no"], supplier_id, party_id)
-        result = db_connector.execute_query(query_2)
+        result = execute_query(query_2)
         memo_data = result["result"]
 
         if len(memo_data) != 0:
@@ -192,7 +176,7 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
 
     query = "select to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
             "party.name as party_name, supplier.name as supplier_name, "\
-            "bill_number as bill_no, amount as bill_amt, " \
+            "bill_number as bill_no, amount::integer as bill_amt, " \
             "CASE WHEN status='F' THEN '0'" \
             "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amt," \
             "status from " \
@@ -218,9 +202,9 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     start_date = str(parse_date(start_date))
     end_date = str(parse_date(end_date))
 
-    query = "select bill_number as bill_no, amount as bill_amt, " \
+    query = "select bill_number as bill_no, amount::integer as bill_amt, " \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
-            "(amount - (partial_amount)-gr_amount - deduction) as bill_amt," \
+            "(amount - (partial_amount)-gr_amount - deduction) as pending_amt," \
             "DATE_PART('day', NOW() - register_date)::integer as days, " \
             "status from " \
             "register_entry JOIN supplier ON supplier.id = register_entry.supplier_id " \

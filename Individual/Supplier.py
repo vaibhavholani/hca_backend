@@ -16,9 +16,9 @@ class Supplier(Individual):
     address: The address of the supplier.
 
     """
-
+    table_name = "supplier"
     def __init__(self, name: str, address: str, *args, **kwargs) -> None:
-        super().__init__(name, address)
+        super().__init__(name, address, self.table_name)
     
     @staticmethod
     def get_supplier_name_by_id(supplier_id: int) -> str:

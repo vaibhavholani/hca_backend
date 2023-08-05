@@ -1,91 +1,137 @@
 from __future__ import annotations
-from psql import db_connector
+from typing import Dict
+from psql import db_connector, execute_query
 from API_Database import retrieve_memo_entry
 from Entities import MemoEntry, MemoBill
+from .update_partial_amount import update_part_payment
+from Exceptions import DataError
+from pypika import Query, Table
 
 
-def insert_memo_entry(entry: MemoEntry) -> None:
-    # Open a new connection
-    db, cursor = db_connector.cursor()
+def insert_memo_entry(entry: MemoEntry) -> Dict:
 
-    if entry.mode == "Good Return":
-        sql = "INSERT INTO memo_entry (supplier_id, party_id, register_date, memo_number, gr_amount) " \
-            "VALUES (%s, %s, %s, %s, %s)"
-        val = (entry.supplier_id, entry.party_id, str(entry.date), entry.memo_number, entry.amount)
-        db_connector.add_stack_val(sql, val)
-        cursor.execute(sql, val)
+    # Insert Memo Entry using pypika
+    status = insert_memo(entry)
+
+    # Get Memo ID
+    memo_id = retrieve_memo_entry.get_id_by_memo_number(entry.memo_number,
+                                                        entry.supplier_id,
+                                                        entry.party_id)
+
+    # Insert Memo Bills
+    for bill in entry.memo_bills:
+        status = insert_memo_bill(bill, memo_id)
+
+    # Insert Memo Payments
+    for payment in entry.payment:
+        payment["memo_id"] = memo_id
+        status = insert_memo_payment(payment)
+
+    if entry.mode == "Full":
+        for part_memo_id in entry.part_payment:
+            status = update_part_payment(entry.supplier_id,
+                                         entry.party_id,
+                                         memo_id=part_memo_id,
+                                         use_memo_id=memo_id)
+
+        return status
+
+    elif entry.mode == "Part":
+        return insert_part_memo(entry, memo_id)
+
     else:
-        sql = "INSERT INTO memo_entry (supplier_id, party_id, register_date, memo_number, amount) " \
-              "VALUES (%s, %s, %s, %s, %s)"
-        val = (entry.supplier_id, entry.party_id, str(entry.date), entry.memo_number, entry.amount)
-
-        cursor.execute(sql, val)
-        db_connector.add_stack_val(sql, val)
-
-    db.commit()
-
-    db.close()
-    db_connector.update()
+        raise DataError("Invalid Memo Type")
 
 
-def insert_memo_payemts(entry: MemoEntry) -> None:
+def insert_memo(entry: MemoEntry) -> None:
+    """
+    Insert a memo_entry into the memo_entry table.
+    """
+
+    # Define the table
+    memo_entry_table = Table('memo_entry')
+
+    # Build the INSERT query using Pypika
+    insert_query = Query.into(memo_entry_table).columns(
+        'supplier_id',
+        'party_id',
+        'memo_number',
+        'register_date',
+        'amount',
+        'gr_amount',
+        'deduction'
+    ).insert(
+        entry.supplier_id,
+        entry.party_id,
+        entry.memo_number,
+        entry.register_date,
+        entry.amount,
+        entry.gr_amount,
+        entry.deduction
+    )
+
+    # Get the raw SQL query and parameters from the Pypika query
+    sql = insert_query.get_sql()
+
+    # Execute the query
+    return execute_query(sql)
+
+
+def insert_memo_bill(entry: MemoBill, memo_id: int) -> None:
+    """
+    Insert all the bills attached to the same memo number.
+    """
+    memo_bills_table = Table('memo_bills')
+    insert_query = Query.into(memo_bills_table).columns(
+        'memo_id',
+        'bill_number',
+        'type',
+        'amount'
+    ).insert(
+        memo_id,
+        entry.bill_number,
+        entry.type,
+        entry.amount
+    )
+
+    sql = insert_query.get_sql()
+    return execute_query(sql)
+
+
+def insert_memo_payment(payment: Dict) -> None:
     """
     Add the memo paymentns for the given memo_entry
     """
 
-    # Open a new connection
-    db, cursor = db_connector.cursor()
-
-    memo_id = retrieve_memo_entry.get_id_by_memo_number(entry.memo_number, entry.supplier_id, entry.party_id)
-
-    payment_list = [(memo_id, int(e[0]), int(e[1])) for e in entry.payment_info]
-
-    sql = "INSERT INTO memo_payments (memo_id, bank_id, cheque_number) " \
-          "VALUES (%s, %s, %s)"
-
-    cursor.executemany(sql, payment_list)
-    db_connector.add_stack_val_multiple(sql, payment_list)
-    db.commit()
-
-    db.close()
-    db_connector.update()
+    memo_payments_table = Table('memo_payments')
+    insert_query = Query.into(memo_payments_table).columns(
+        'memo_id',
+        'bank_id',
+        'cheque_number'
+    ).insert(
+        payment["memo_id"],
+        payment["bank_id"],
+        payment["cheque_number"]
+    )
+    sql = insert_query.get_sql()
+    return execute_query(sql)
 
 
-def insert_memo_bills(entry: MemoBill) -> None:
+def insert_part_memo(entry: MemoEntry, memo_id) -> None:
     """
     Insert all the bills attached to the same memo number.
     """
 
-    # Open a new connection
-    db, cursor = db_connector.cursor()
+    part_payments_table = Table('part_payments')
+    insert_query = Query.into(part_payments_table).columns(
+        'supplier_id',
+        'party_id',
+        'memo_id'
+    ).insert(
+        entry.supplier_id,
+        entry.party_id,
+        memo_id
+    )
 
-    sql = "INSERT INTO memo_bills (memo_id, bill_number, type, amount) " \
-          "VALUES (%s, %s, %s, %s)"
-    val = (entry.memo_id, entry.bill_number, entry.type, entry.amount)
-
-    cursor.execute(sql, val)
-    db_connector.add_stack_val(sql, val)
-    db.commit()
-    db.close()
-    db_connector.update()
-
-
-def insert_part_memo(entry: MemoBill) -> None:
-    """
-    Insert all the bills attached to the same memo number.
-    """
-
-    # Open a new connection
-    db, cursor = db_connector.cursor()
-
-    sql = "INSERT INTO part_payments (supplier_id, party_id, memo_id) " \
-          "VALUES (%s, %s, %s)"
-    val = (entry.supplier_id, entry.party_id, entry.memo_id)
-
-    cursor.execute(sql, val)
-    db_connector.add_stack_val(sql, val)
-    db.commit()
-    db.close()
-    db_connector.update()
-
-
+    sql = insert_query.get_sql()
+    return execute_query(sql)

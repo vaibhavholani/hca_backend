@@ -12,7 +12,7 @@ def execute_query(query: str) -> None:
 
 if __name__ == "__main__":
     try: 
-        query = "ALTER table memo_entry drop column gr_amount"
+        query = "ALTER TABLE memo_entry ADD COLUMN gr_amount INT DEFAULT 0, ADD COLUMN deduction INT DEFAULT 0;"
         execute_query(query)
     except Exception as e: 
         print("Error Occured: Please contact Vaibhav")

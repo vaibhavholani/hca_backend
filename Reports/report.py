@@ -3,13 +3,17 @@ from typing import List, Dict
 from Reports import khata_report, payment_list, supplier_register
 import json
 import decimal
+from datetime import datetime
 
 # Custom JSON encoder for Decimal objects
-class DecimalEncoder(json.JSONEncoder):
+class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
-        return super(DecimalEncoder, self).default(obj)
+        if isinstance(obj, datetime):
+            return obj.strftime("%d/%m/%Y")
+        elif isinstance(obj, decimal.Decimal) or isinstance(obj, float):
+            return int(obj)
+        
+        return super(CustomEncoder, self).default(obj)
 
 class Report: 
     
@@ -17,14 +21,17 @@ class Report:
                "Payment List": {"class": payment_list.PaymentList, "type": "header_subheader"} ,
                "Supplier Register": {"class": supplier_register.SupplierRegister, "type": "header"}
               }
+
     def __init__(self, 
                  title: str,
                  party_ids: List[int], 
                  supplier_ids: List[int], 
                  start_date: str, 
-                 end_date: str) -> None:
+                 end_date: str, 
+                 test_mode: bool= False) -> None:
         
         self.title = title.replace('_', ' ').title()
+        # Setting the correct preset
         self.table = self._preset[self.title]["class"]()
         self.report_type = self._preset[self.title]["type"]
         self.header_ids = supplier_ids if self.table.header_supplier else party_ids
@@ -87,7 +94,7 @@ class Report:
             all_headings.append(table_data)
             
         all_data["headings"] = all_headings
-        json_data = json.loads(json.dumps(all_data, cls=DecimalEncoder))
+        json_data = json.loads(json.dumps(all_data, cls=CustomEncoder))
 
         return json_data
   
@@ -123,6 +130,9 @@ class Report:
               all_headings.append(table_data)
               
           all_data["headings"] = all_headings
-          json_data = json.loads(json.dumps(all_data, cls=DecimalEncoder))
+          json_data = json.loads(json.dumps(all_data, cls=CustomEncoder))
 
           return json_data
+
+    def _dump_json(self, data: Dict) -> None:
+      return json.dumps(data, cls=CustomEncoder)

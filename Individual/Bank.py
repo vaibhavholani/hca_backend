@@ -16,6 +16,7 @@ class Bank(Individual):
     address: The address of the Bank.
 
     """
+    table_name="bank"
 
     def __init__(self, name: str, address: str, *args, **kwargs):
-        super().__init__(name, address)
+        super().__init__(name, address, self.table_name)
