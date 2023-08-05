@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Dict, Union
 from datetime import datetime
 from Individual import Supplier, Party
-from API_Database import efficiency
+from API_Database import efficiency, parse_date
 from API_Database import retrieve_register_entry, retrieve_partial_payment
 from itertools import zip_longest
 
@@ -126,6 +126,9 @@ class MetaTable:
     
     @staticmethod
     def _format_date(date: datetime) -> str:
+        # if not instance of datetime, parse date
+        if not isinstance(date, datetime):
+            date = parse_date(date)
         return date.strftime("%d/%m/%Y")
 
 

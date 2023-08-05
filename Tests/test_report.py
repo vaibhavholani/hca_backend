@@ -58,7 +58,8 @@ class TestKhataTable(KhataReport):
                 register_attr = getattr(register_entry, column)
                 if column == "register_date":
                     register_row[report_column_name] = self._format_date(register_attr)
-                register_row[report_column_name] = register_attr
+                else:
+                    register_row[report_column_name] = register_attr
             # add dummy memo columns
             dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "memo_type": ""}
             register_row = {**register_row, **dummy_memo}

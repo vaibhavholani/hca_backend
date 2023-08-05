@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List, Union, Tuple, Dict
 from psql import db_connector, execute_query
-from API_Database.utils import parse_date
+from API_Database.utils import parse_date, sql_date
 from datetime import datetime, timedelta
 from pypika import Query, Table, Field, functions as fn
 from Exceptions import DataError
@@ -114,10 +114,6 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     """
 
     data = []
-    start_date = str(parse_date(start_date))
-    end_date = str(parse_date(end_date))
-    # start_date = start_date.strftime('%Y-%m-%d')
-    # end_date = end_date.strftime('%Y-%m-%d')
 
 
     query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
@@ -168,9 +164,6 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     # Open a new connection
     db, cursor = db_connector.cursor(True)
 
-    start_date = str(parse_date(start_date))
-    end_date = str(parse_date(end_date))
-
     query = "select to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
             "party.name as party_name, supplier.name as supplier_name, "\
             "bill_number as bill_no, amount::integer as bill_amt, " \
@@ -195,9 +188,6 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     """
     # Open a new connection
     db, cursor = db_connector.cursor(True)
-
-    start_date = str(parse_date(start_date))
-    end_date = str(parse_date(end_date))
 
     query = "select bill_number as bill_no, amount::integer as bill_amt, " \
             "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
@@ -228,9 +218,6 @@ def get_payment_list_summary_data(supplier_id: int, party_id: int, start_date: s
     """
     # Open a new connection
     db, cursor = db_connector.cursor()
-
-    start_date = str(parse_date(start_date))
-    end_date = str(parse_date(end_date))
 
     # Find amount less than 40 days
     query1 = "select SUM(amount), SUM(amount) - SUM(partial_amount) - SUM(gr_amount) - SUM(deduction)" \
@@ -278,9 +265,6 @@ def grand_total_work(supplier_id: int, party_id: int, start_date: str, end_date:
     """
     # Open a new connection
     db, cursor = db_connector.cursor()
-
-    start_date = str(parse_date(start_date))
-    end_date = str(parse_date(end_date))
 
     query = "select SUM(amount) from register_entry where " \
             "party_id = '{}' AND supplier_id = '{}' AND " \
@@ -439,12 +423,6 @@ def generate_total(supplier_ids: Union[int, List[int]],
         supplier_ids = [supplier_ids]
     if isinstance(party_ids, int):
         party_ids = [party_ids]
-
-    # Handling date
-    if isinstance(start_date, str):
-        start_date = parse_date(start_date)
-    if isinstance(end_date, str):
-        end_date = parse_date(end_date)
 
     # use generate_total_bill_entity function and find the the total for each supplier_id and party_id
     total = 0

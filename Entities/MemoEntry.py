@@ -12,7 +12,7 @@ from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
 from API_Database import retrieve_memo_entry, get_memo_entry_id
-from API_Database import parse_date
+from API_Database import parse_date, sql_date
 from Exceptions import DataError
 
 
@@ -69,7 +69,7 @@ class MemoEntry(Entry):
         self.supplier_id = supplier_id
         self.party_id = party_id
         self.amount = amount
-        self.register_date = parse_date(register_date)
+        self.register_date = sql_date(parse_date(register_date))
         self.gr_amount = gr_amount
         self.deduction = deduction
 

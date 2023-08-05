@@ -15,8 +15,7 @@ def make_report(select, supplier_ids, party_ids, start_date, end_date):
         party_ids = [party_ids]
     
     options = ["khata_report", "supplier_register", "payment_list", "payment_list_summary", "grand_total_list", "legacy_payment_list" ]
-    start_date = (datetime.datetime.strptime(start_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
-    end_date = (datetime.datetime.strptime(end_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
+
     party_ids, supplier_ids = efficiency.smart_selection(supplier_ids, party_ids, start_date, end_date)
 
     if select in options[0:3]:

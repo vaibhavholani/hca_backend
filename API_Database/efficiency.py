@@ -14,7 +14,7 @@ def smart_selection(suppliers: List[int], parties: List[int], start_date: dateti
     """
 
     db, cursor = db_connector.cursor()
-    query = "select supplier_id, party_id from register_entry where TO_DATE('{}', 'DD/MM/YYYY') >= register_date or TO_DATE('{}', 'DD/MM/YYYY') <= register_date"\
+    query = "select supplier_id, party_id from register_entry where '{}' >= register_date or '{}' <= register_date"\
         .format(str(end_date), str(start_date))
     cursor.execute(query)
     data = cursor.fetchall()

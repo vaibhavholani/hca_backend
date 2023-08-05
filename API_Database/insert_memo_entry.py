@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict
 from psql import db_connector, execute_query
-from API_Database import retrieve_memo_entry
+from API_Database import retrieve_memo_entry, sql_date
 from Entities import MemoEntry, MemoBill
 from .update_partial_amount import update_part_payment
 from Exceptions import DataError

@@ -35,7 +35,6 @@ class RegisterEntry(Entry):
     register_date: datetime
     amount: int
     bill_number: int
-    date: datetime
     status: str  
     gr_amount: int
     deduction: int
@@ -68,7 +67,7 @@ class RegisterEntry(Entry):
         self.amount = amount
         self.supplier_id = supplier_id
         self.party_id = party_id
-        self.register_date = utils.parse_date(register_date)
+        self.register_date = utils.sql_date(utils.parse_date(register_date))
         self.gr_amount = gr_amount
         self.deduction = deduction
         self.status = status

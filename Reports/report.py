@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import List, Dict
 from Reports import khata_report, payment_list, supplier_register
+from API_Database import parse_date, sql_date
 import json
 import decimal
 from datetime import datetime
@@ -36,8 +37,8 @@ class Report:
         self.report_type = self._preset[self.title]["type"]
         self.header_ids = supplier_ids if self.table.header_supplier else party_ids
         self.subheader_ids = supplier_ids if not self.table.header_supplier else party_ids
-        self.start_date = start_date
-        self.end_date = end_date
+        self.start_date = sql_date(parse_date(start_date))
+        self.end_date = sql_date(parse_date(end_date))
 
         # self.start_date = (datetime.datetime.strptime(start_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
         # self.end_date = (datetime.datetime.strptime(end_date, "%Y-%m-%d")).strftime('%d/%m/%Y')
