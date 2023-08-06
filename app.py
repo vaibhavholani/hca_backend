@@ -15,6 +15,7 @@ from API_Database import edit_individual, delete_entry, retrieve_memo_entry
 from API_Database import update_register_entry, update_memo_entry
 from backup import backup
 from Entities import RegisterEntry, MemoEntry
+from Individual import Supplier, Party, Bank, Transporter
 from Reports import report_select
 from Legacy_Data import add_party, add_suppliers
 from Exceptions import DataError
@@ -115,7 +116,15 @@ def create_report():
 
 @app.route(BASE + '/add/individual', methods=['POST'])
 def add_individual():
-    return insert_individual.add_individual(request.json)
+    data = request.json
+
+    entity_mapping = {
+        "supplier": Supplier,
+        "party": Party,
+        "bank": Bank,
+        "transport": Transporter}
+    
+    return entity_mapping[data["entity"]].insert(data)
 
 
 @app.route(BASE + '/add/register_entry', methods=['POST'])
