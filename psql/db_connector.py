@@ -65,7 +65,7 @@ def execute_query(query: str, dictCursor: bool = True, **kwargs):
 
     except Exception as e:
         print("Error executing query:", e)
-        raise DataError({"status": "error", "message": f"Error with Query Exexcution: {e}"})
+        raise DataError({"status": "error", "message": f"Error with Query Execution: {e}"})
 
 
 def update(): pass

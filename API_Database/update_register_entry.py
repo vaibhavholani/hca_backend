@@ -9,7 +9,7 @@ def update_register_entry_data(entry: RegisterEntry) -> None:
     Update changes made to the register entry by a memo_entry
     """
    
-    entry_id = retrieve_register_entry.get_register_entry_id(entry.supplier_id, entry.party_id, entry.bill_number)
+    entry_id = entry.get_id()
 
     update_register_entry_by_id(entry, entry_id)
 

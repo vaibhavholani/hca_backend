@@ -58,7 +58,7 @@ def check_add_memo(memo_number: int, memo_date: str) -> bool:
     return False
 
 
-def get_memo_entry_id(memo_number: int, supplier_id: int, party_id: int) -> int:
+def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
     """
     Get the memo_id using memo_number, supplier_id and party_id
     """
@@ -68,7 +68,31 @@ def get_memo_entry_id(memo_number: int, supplier_id: int, party_id: int) -> int:
                 memo_number, supplier_id, party_id)
 
     response = execute_query(query)
+
+    if len(response["result"]) == 0:
+        raise (DataError(
+            f"No memo entry found with memo_number: {memo_number}, supplier_id: {supplier_id}, party_id: {party_id}"))
+    elif len(response["result"]) > 1:
+        raise (DataError(
+            f"Multiple memo entries found with memo_number: {memo_number}, supplier_id: {supplier_id}, party_id: {party_id}"))
+    
     return int(response["result"][0]["id"])
+
+
+def get_memo_bill_id(memo_id: int, bill_number: int, type: str, amount: int) -> Dict:
+
+    memo_bills = Table('memo_bills')
+    query = Query.from_(memo_bills).select(
+        memo_bills.id).where((memo_bills.memo_id == memo_id) &
+                             (memo_bills.bill_number == bill_number) &
+                             (memo_bills.type == type) &
+                             (memo_bills.amount == amount))
+    sql = query.get_sql()
+    response = execute_query(sql)
+    if len(response["result"]) == 0:
+        raise (DataError(
+            f"No memo bill found with memo_id: {memo_id}, bill_number: {bill_number}, type: {type}, amount: {amount}"))
+    return response["result"][0]["id"]
 
 
 def get_memo_bills_by_id(memo_id: int) -> Dict:

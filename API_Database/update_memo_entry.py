@@ -1,5 +1,5 @@
 from __future__ import annotations
-from psql import db_connector
+from psql import db_connector, execute_query
 from API_Database import update_partial_amount, update_register_entry
 from API_Database import retrieve_memo_entry, retrieve_register_entry
 import datetime
@@ -16,8 +16,9 @@ def update_memo_entry_data(entry: MemoEntry) -> None:
     # Open a new connection
     db, cursor = db_connector.cursor()
 
-    entry_id = retrieve_memo_entry.get_memo_entry_id(
-        entry.memo_number, entry.supplier_id, entry.party_id)
+    entry_id = retrieve_memo_entry.get_memo_entry_id(entry.supplier_id,
+                                                      entry.party_id,
+                                                      entry.memo_number)
 
     if entry.mode != "Good Return":
         query = "UPDATE memo_entry SET amount = amount + '{}' " \
@@ -73,19 +74,6 @@ def delete_memo_bill(id: int):
 
     # Updtaing the memo amount
     update_memo_amount(int(data["id"]))
-
-    db.commit()
-    db.close()
-
-
-def delete_memo_payments(id: int):
-
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
-
-    query = f"delete from memo_payments where memo_id = {id}"
-
-    cursor.execute(query)
 
     db.commit()
     db.close()

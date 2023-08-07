@@ -1,13 +1,30 @@
 from __future__ import annotations
-from API_Database import retrieve_partial_payment
 from psql import execute_query
+from pypika import Query, Table
 
-def update_part_payment(supplier_id: int, party_id: int, memo_id:int, use_memo_id:int) -> None:
+def update_part_payment(supplier_id: int, 
+                        party_id: int, 
+                        memo_id: int, 
+                        use_memo_id: int = None, 
+                        used: bool = True) -> None:
     """
     Use partial amount between a supplier and party
     """
 
-    query = "UPDATE part_payments SET used = {}, use_memo_id = {} WHERE supplier_id = {} AND party_id = {} AND memo_id = {}" \
-        .format(True, use_memo_id, supplier_id, party_id, memo_id)
+    part_payments = Table('part_payments')
 
-    return execute_query(query)
+    update_query = (
+        Query.update(part_payments)
+        .set(part_payments.used, used)
+        .set(part_payments.use_memo_id, None if use_memo_id is None else use_memo_id)
+        .where(part_payments.supplier_id == supplier_id)
+        .where(part_payments.party_id == party_id)
+        .where(part_payments.memo_id == memo_id)
+    )
+
+    return execute_query(update_query.get_sql())
+
+
+
+
+

@@ -1,6 +1,7 @@
 from __future__ import annotations
-from psql import db_connector
-
+from typing import Dict
+from psql import db_connector, execute_query
+from Exceptions import DataError
 
 def get_partial_payment(supplier_id: int, party_id: int) -> int:
     """
@@ -25,3 +26,11 @@ def get_partial_payment(supplier_id: int, party_id: int) -> int:
     db.close()
     return part_list
 
+def get_partial_payment_by_memo_id(memo_id: int) -> Dict: 
+    query = "select id, memo_id, used from part_payments where memo_id = '{}'".format(memo_id)
+    response = execute_query(query)
+
+    if len(response["result"]) > 1 or len(response["result"]) == 0:
+        raise DataError(f"More than one party payment added with memo_id: {memo_id}")
+    
+    return response["result"][0]

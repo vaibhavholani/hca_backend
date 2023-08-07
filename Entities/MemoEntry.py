@@ -12,7 +12,8 @@ from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
 from API_Database import retrieve_memo_entry, get_memo_entry_id
-from API_Database import parse_date, sql_date
+from API_Database import update_part_payment
+from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
 
 
@@ -88,7 +89,7 @@ class MemoEntry(Entry):
         self.part_payment = [int(memo_id) for memo_id in selected_part]
 
         # Memo Bills
-        self.memo_bills = []
+        self.memo_bills: List[MemoBill] = []
 
     def full_payment(self) -> None:
         """
@@ -169,6 +170,31 @@ class MemoEntry(Entry):
         return get_memo_entry_id(self.supplier_id,
                                     self.party_id, 
                                     self.memo_number)
+    
+    def delete(self) -> Dict:
+        """
+        Delete the memo entry from the database
+        """
+        memo_id = self.get_id()
+
+        # Delete the memo bills
+        for memo_bill in self.memo_bills:
+            ret = memo_bill.delete(memo_id, self.supplier_id, self.party_id)
+
+        # Delete the memo payments
+        ret = delete_memo_payments(memo_id)
+
+        # Delete the memo payments
+        # check if the a part payment was used in the memo and then remove that
+        for part_memo_id in self.part_payment:
+            ret = update_part_payment(self.supplier_id,
+                                        self.party_id,
+                                        memo_id=part_memo_id,
+                                        used=False)
+
+        # Delete the memo entry
+        ret = super().delete()
+        return ret
     
     @staticmethod
     def check_new(memo_number: int,
