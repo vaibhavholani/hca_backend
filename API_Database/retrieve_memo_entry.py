@@ -5,7 +5,7 @@ import datetime
 from typing import Dict
 from Exceptions import DataError
 from psql import db_connector, execute_query
-from API_Database.utils import parse_date
+from API_Database.utils import parse_date, sql_date
 from API_Database.retrieve_partial_payment import get_partial_payment
 from pypika import Query, Table, Field, functions as fn
 import sys
@@ -118,6 +118,7 @@ def get_memo_entry(memo_id: int) -> Dict:
     memo_payments_table = Table('memo_payments')
     memo_bills_table = Table('memo_bills')
     part_payments_table = Table('part_payments')
+    bank_table = Table('bank')
     
     # Fetch basic memo data
     select_query = Query.from_(memo_entry_table).select("*").where(memo_entry_table.id == memo_id)
@@ -125,13 +126,21 @@ def get_memo_entry(memo_id: int) -> Dict:
     
     # Fetch associated payments
     select_query = Query.from_(memo_payments_table).select("*").where(memo_payments_table.memo_id == memo_id)
+
+    select_query = (
+        Query.from_(memo_payments_table)
+        .join(bank_table)
+        .on(memo_payments_table.bank_id == bank_table.id)
+        .select(memo_payments_table.bank_id, bank_table.name.as_('bank_name'), memo_payments_table.cheque_number)
+        .where(memo_payments_table.memo_id == memo_id)
+    )
     payments_data = execute_query(select_query.get_sql())["result"]
     
     # Construct payment data in desired format
-    payments = [{'bank_id': p["bank_id"], 'cheque_number': p["cheque_number"]} for p in payments_data]
+    payments = [{'bank_id': p["bank_id"],'bank_name': p["bank_name"], 'cheque_number': p["cheque_number"]} for p in payments_data]
     
     # Fetch associated bills
-    select_query = Query.from_(memo_bills_table).select("*").where(memo_bills_table.memo_id == memo_id)
+    select_query = Query.from_(memo_bills_table).select("*").where(memo_bills_table.memo_id == memo_id).orderby(memo_bills_table.bill_number)
     bills_data = execute_query(select_query.get_sql())["result"]
     
    # Determine the mode based on bills_data
@@ -156,7 +165,7 @@ def get_memo_entry(memo_id: int) -> Dict:
         "amount": memo_data["amount"],
         "gr_amount": memo_data.get("gr_amount", 0),
         "deduction": memo_data.get("deduction", 0),
-        "register_date": memo_data["register_date"],
+        "register_date": sql_date(memo_data["register_date"]),
         "mode": mode,
         "memo_bills": bills_data,
         "payment": payments
@@ -175,12 +184,7 @@ def get_all_memo_entries(**kwargs):
     # create query to get all data from regsiter entry using pypika
     memo_entry_table = Table('memo_entry')
     select_query = Query.from_(memo_entry_table).select(
-        memo_entry_table.supplier_id,
-        memo_entry_table.party_id,
-        memo_entry_table.memo_number,
-        fn.ToChar(memo_entry_table.register_date, 'DD/MM/YYYY').as_("register_date"),
-        memo_entry_table.deduction,
-        memo_entry_table.gr_amount
+        memo_entry_table.id,
     )
 
     if "supplier_id" in kwargs:
@@ -200,7 +204,16 @@ def get_all_memo_entries(**kwargs):
 
     # Execute the query and fetch data from the database
     response = execute_query(sql)
-    return response["result"]
+
+    memo_entries = response["result"]
+    memo_entries_json: List[Dict] = []
+
+    # Fetch json for all valid memo entries
+    for memo_entry in memo_entries:
+        memo_id = memo_entry["id"]
+        memo_entries_json.append(get_memo_entry(memo_id))
+    
+    return memo_entries_json
 
 def get_total_memo_entity(supplier_id: int,
                           party_id: int,

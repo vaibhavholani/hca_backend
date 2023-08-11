@@ -18,9 +18,11 @@ class MemoBill(Entry):
     """Create a memo for a bill."""
 
     def __init__(self, bill_number: int,
-                 amount: int,
-                 memo_type: str,
-                 table_name: str = "memo_bills") -> None:
+                    amount: int,
+                    memo_type: str,
+                    table_name: str = "memo_bills", 
+                    *args,
+                    **kwargs) -> None:
 
         super().__init__(table_name=table_name)
         self.bill_number = bill_number
@@ -54,12 +56,14 @@ class MemoBill(Entry):
             # Remove the effect of the memo bill from the register entry
             register_entry = RegisterEntry.retrieve(
                 supplier_id, party_id, self.bill_number)
+            
             if self.type == "F":
                 register_entry.status = "N"
             elif self.type == "D":
                 register_entry.deduction -= self.amount
             elif self.type == "G":
                 register_entry.gr_amount -= self.amount
+                
             ret = register_entry.update()
         return ret
 
@@ -77,6 +81,25 @@ class MemoBill(Entry):
         ret = delete_by_id(memo_bill_id, self.table_name)
 
         return ret
+
+    @classmethod
+    def from_dict(cls, data: Dict, *args, **kwargs) -> MemoBill:
+        """Construct a MemoBill instance from a dictionary."""
+        # List of attribute names to be converted to integers
+        int_attributes = ["bill_number", "amount"]
+
+        # Make sure type is in data and only of type "F", "D", "G", "PR" and then cast it memo_type
+        if "type" not in data:
+            raise DataError("Memo Bill type not found")
+        elif data["type"] not in ["F", "D", "G", "PR"]:
+            raise DataError(
+                f"Memo Bill type {data['type']} not supported")
+        else:
+            data["memo_type"] = data["type"]
+
+        data = cls.convert_int_attributes(data, int_attributes)
+        # Return the created instance
+        return cls(**data)
 
     def __str__(self) -> str:
         return f"Memo Bill: Bill Number: {self.bill_number}, Amount: {self.amount}, Type: {self.type}"

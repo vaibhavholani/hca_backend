@@ -6,6 +6,45 @@ from datetime import datetime, timedelta
 from pypika import Query, Table, Field, functions as fn
 from Exceptions import DataError
 
+def get_all_register_entries(**kwargs): 
+    """
+    Get all register entries and also use 
+    """
+    # create query to get all data from regsiter entry using pypika
+    register_entry_table = Table('register_entry')
+    select_query = Query.from_(register_entry_table).select(
+        register_entry_table.supplier_id,
+        register_entry_table.party_id,
+        register_entry_table.bill_number,
+        fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_("register_date"),
+        fn.Cast(register_entry_table.amount, "integer").as_("amount"),
+        register_entry_table.partial_amount,
+        register_entry_table.status,
+        register_entry_table.deduction,
+        register_entry_table.gr_amount
+    )
+
+    if "supplier_id" in kwargs:
+        supplier_id = int(kwargs["supplier_id"])
+        select_query = select_query.where(
+            (register_entry_table.supplier_id == supplier_id)
+        )
+
+    if "party_id" in kwargs:
+        party_id = int(kwargs["party_id"])
+        select_query = select_query.where(
+            (register_entry_table.party_id == party_id)
+        )
+    
+    # Get the raw SQL query from the Pypika query
+    sql= select_query.get_sql()
+
+    # Execute the query and fetch data from the database
+    response = execute_query(sql)
+    return response["result"]
+
+    
+
 def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int) -> int:
     """
     Returns primary key id of the register entry
@@ -65,14 +104,13 @@ def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> Dic
 
     # Define the table
     register_entry_table = Table('register_entry')
-
     # Build the SELECT query using Pypika
     select_query = Query.from_(register_entry_table).select(
         register_entry_table.supplier_id,
         register_entry_table.party_id,
         register_entry_table.bill_number,
         register_entry_table.register_date,
-        register_entry_table.amount,
+        fn.Cast(register_entry_table.amount, "integer").as_("amount"),
         register_entry_table.partial_amount,
         register_entry_table.status,
         register_entry_table.deduction,
@@ -130,7 +168,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
         return bills_data
    
     # dummy memo_bill_retrieval
-    dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "memo_type": ""}
+    dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "chk_amt": "", "memo_type": ""}
     for bills in bills_data:
         query_2 = "select memo_entry.memo_number as memo_no, memo_bills.amount as memo_amt, to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date, " \
                   "memo_entry.amount as chk_amt, memo_bills.type as memo_type " \

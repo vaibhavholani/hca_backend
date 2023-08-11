@@ -1,5 +1,6 @@
 from dateutil import parser
 from datetime import datetime
+     
 
 def parse_date(date_string, day_first=None):
 
@@ -15,3 +16,6 @@ def parse_date(date_string, day_first=None):
 
 def sql_date(date: datetime):
         return date.strftime("%Y-%m-%d")
+
+def user_date(date: datetime):
+        return date.strftime("DD/MM/YYYY")

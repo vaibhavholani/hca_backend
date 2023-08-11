@@ -84,13 +84,19 @@ class RegisterEntry(Entry):
                                     self.party_id, 
                                     self.bill_number,)
     
+    def delete(self) -> Dict:
+        if self.status == "N":
+            return super().delete()
+        else:
+            return {"status": "error",
+                    "message": "Register Entry has been paid"}
     @staticmethod
     def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
         pending_bills_data = get_pending_bills(supplier_id, party_id)
         return pending_bills_data
 
     @classmethod
-    def from_dict(cls, data: Dict) -> RegisterEntry:
+    def from_dict(cls, data: Dict, *args, **kwargs) -> RegisterEntry:
 
         # List of attribute names to be converted to integers
         int_attributes = ["bill_number",

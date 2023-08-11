@@ -13,12 +13,15 @@ from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register
 from API_Database import insert_individual, retrieve_all, retrieve_from_id
 from API_Database import edit_individual, delete_entry, retrieve_memo_entry
 from API_Database import update_register_entry, update_memo_entry
+
+
 from backup import backup
 from Entities import RegisterEntry, MemoEntry
 from Individual import Supplier, Party, Bank, Transporter
-from Reports import report_select
+from Reports import report_select, CustomEncoder
 from Legacy_Data import add_party, add_suppliers
 from Exceptions import DataError
+from utils import table_class_mapper
 
 # load env file
 load_dotenv()
@@ -149,10 +152,11 @@ def add_legacy():
     return {"status": "okay"}
 
 
-@app.route(BASE + '/get_all/<string:table_name>')
-def all(table_name: str):
-    data = retrieve_all.get_all(table_name)
-    return json.dumps(data)
+@app.route(BASE + '/get_all', methods=['POST'])
+def get_all():
+    if request.method == 'POST':
+        data = request.json
+        return json.dumps(retrieve_all.get_all(**data), cls=CustomEncoder)
 
 
 @app.route(BASE + '/get_by_id/<string:table_name>/<int:id>')
@@ -175,12 +179,15 @@ def update_id(table_name: str):
 
 
 @app.route(BASE + '/delete/<string:table_name>', methods=['POST'])
-def delete_id(table_name: str):
+def delete(table_name: str):
     if request.method == 'POST':
         data = request.json
-        return delete_entry.delete_entry(data, table_name)
+        cls = table_class_mapper(table_name)
+        instance=cls.from_dict(data, parse_memo_bills=True)
+        r_val = instance.delete()
+        return jsonify(r_val)
 
-    return {"status": "okay"}
+    raise DataError("Only POST requests are allowed on this /delete")
 
 
 @app.route(BASE + '/get_memo_bills/<int:id>')

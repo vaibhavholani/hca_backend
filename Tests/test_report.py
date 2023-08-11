@@ -23,12 +23,13 @@ class TestKhataTable(KhataReport):
         input_args = self._generate_input_args(header_id, subheader_id, start_date, end_date)
         
         # generate data rows
-        data_rows = self.generate_register_rows(register_entries, **input_args)
+        data_rows = self._generate_rows_helper(register_entries, memo_entries, **input_args)
+        
         # add part rows
-        # if self.part_display_mode == "column":
-        #     data_rows = self.merge_dicts_parallel(self.generate_part_columns(**input_args), data_rows )
-        # elif self.part_display_mode == "row":
-        #     data_rows.extend(self.generate_part_rows(**input_args))
+        if self.part_display_mode == "column":
+            data_rows = self.merge_dicts_parallel(self.generate_part_columns(**input_args), data_rows )
+        elif self.part_display_mode == "row":
+            data_rows.extend(self.generate_part_rows(memo_entries, **input_args))
         
         # # generate speical rows 
         total_rows = self.generate_total_rows(data_rows)
@@ -46,11 +47,11 @@ class TestKhataTable(KhataReport):
         
         return data_rows, total_rows, cumulative
     
-    def generate_register_rows(self, register_entries: List[RegisterEntry], **kwargs):
+    def _generate_rows_helper(self, register_entries: List[RegisterEntry], memo_entries: List[MemoEntry], **kwargs):
         """
         Generate register rows for a given header and subheader
         """
-        register_columns = []
+        data_rows = []
         for register_entry in register_entries:
             register_row = {}
             for column in self.register_columns:
@@ -60,13 +61,52 @@ class TestKhataTable(KhataReport):
                     register_row[report_column_name] = self._format_date(register_attr)
                 else:
                     register_row[report_column_name] = register_attr
-            # add dummy memo columns
-            dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "memo_type": ""}
-            register_row = {**register_row, **dummy_memo}
-            register_columns.append(register_row)
+            
+            # Here Register Row Contains all information of register Entry 
+            add_dummy = True
+            first = True
+            for memo_entry in memo_entries:
+                for bill in memo_entry.memo_bills:
+                    if bill.bill_number == register_entry.bill_number:
+                        add_dummy = False
+                        memo_dict = {
+                            "memo_no": memo_entry.memo_number,
+                            "memo_amt": bill.amount,
+                            "memo_date": self._format_date(memo_entry.register_date),
+                            "chk_amt": memo_entry.amount,
+                            "memo_type": bill.type
+                        }
+                        if first:
+                            data_row = {**register_row, **memo_dict}
+                            data_rows.append(data_row)
+                            first = False
+                        else: 
+                            data_rows.append(memo_dict)
 
-        return register_columns
+            if add_dummy:
+                # add dummy memo columns
+                dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "chk_amt": "", "memo_type": ""}
+                data_row = {**register_row, **dummy_memo}
+                data_rows.append(data_row)
 
+        return data_rows
+
+    def generate_part_rows(self, memo_entries: List[MemoEntry], **kwargs):
+        """
+        Generate part rows for a given header and subheader
+        """
+        part_rows = []
+        for memo_entry in memo_entries:
+            for bill in memo_entry.memo_bills:
+                if bill.type == "PR":
+                    part_row = {}
+                    part_row["memo_no"] = memo_entry.memo_number
+                    part_row["memo_amt"] = bill.amount
+                    part_row["memo_date"] = self._format_date(memo_entry.register_date)
+                    part_row["chk_amt"] = memo_entry.amount
+                    part_row["memo_type"] = bill.type
+                    part_rows.append(part_row)
+        return part_rows
         
     def generate_part_columns(self, supplier_id: int, party_id: int, **kwargs):
         """

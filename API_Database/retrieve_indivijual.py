@@ -83,4 +83,8 @@ def get_individual_by_id(id: int, table_name: str) -> dict:
         error_message=f"No {table_name} of id {id}"
         raise DataError(error_message)
     
-    return result[0]["id"]
+    if len(result) > 1:
+        error_message=f"Multiple {table_name} of id {id}"
+        raise DataError(error_message)
+
+    return result[0]

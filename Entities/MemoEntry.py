@@ -11,7 +11,7 @@ from .RegisterEntry import RegisterEntry
 from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
-from API_Database import retrieve_memo_entry, get_memo_entry_id
+from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id
 from API_Database import update_part_payment
 from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
@@ -41,11 +41,11 @@ class MemoEntry(Entry):
     part_payment: List[int]
 
     _report_attribute_mapping = {
-    "memo_number": "memo_no",
-    "register_date": "memo_date",
-    "amount": "chk_amt",
-    "type": "memo_type"
-}
+        "memo_number": "memo_no",
+        "register_date": "memo_date",
+        "amount": "chk_amt",
+        "type": "memo_type"
+    }
 
     def __init__(self,
                  memo_number: int,
@@ -64,7 +64,7 @@ class MemoEntry(Entry):
                  **kwargs
                  ) -> None:
 
-        super().__init__(table_name=table_name,*args, **kwargs)
+        super().__init__(table_name=table_name, *args, **kwargs)
 
         self.memo_number = memo_number
         self.supplier_id = supplier_id
@@ -80,11 +80,8 @@ class MemoEntry(Entry):
                 self.supplier_id,
                 self.party_id,
                 selected_bills)
-        
-        self.payment = [
-            {"bank_id": int(info["id"]),
-             "cheque_number": int(info["cheque"])}
-            for info in (payment)]
+
+        self.payment = payment
 
         self.part_payment = [int(memo_id) for memo_id in selected_part]
 
@@ -161,16 +158,16 @@ class MemoEntry(Entry):
 
                     # create memo bill
                     memo_bill = MemoBill(bill.bill_number,
-                                used_amount,
-                                attr_name[0].upper())
+                                         used_amount,
+                                         attr_name[0].upper())
                     # create a memo bill
                     self.memo_bills.append(memo_bill)
 
     def get_id(self) -> int:
         return get_memo_entry_id(self.supplier_id,
-                                    self.party_id, 
-                                    self.memo_number)
-    
+                                 self.party_id,
+                                 self.memo_number)
+
     def delete(self) -> Dict:
         """
         Delete the memo entry from the database
@@ -188,18 +185,18 @@ class MemoEntry(Entry):
         # check if the a part payment was used in the memo and then remove that
         for part_memo_id in self.part_payment:
             ret = update_part_payment(self.supplier_id,
-                                        self.party_id,
-                                        memo_id=part_memo_id,
-                                        used=False)
+                                      self.party_id,
+                                      memo_id=part_memo_id,
+                                      used=False)
 
         # Delete the memo entry
         ret = super().delete()
         return ret
-    
+
     @staticmethod
     def check_new(memo_number: int,
-                  register_date: Union[str, datetime], 
-                  *args, 
+                  register_date: Union[str, datetime],
+                  *args,
                   **kwargs) -> bool:
 
         memo_number = int(memo_number)
@@ -207,28 +204,69 @@ class MemoEntry(Entry):
         return retrieve_memo_entry.check_new_memo(memo_number,
                                                   register_date)
 
+    @staticmethod
+    def get_json(supplier_id: int, party_id: int, memo_number: int) -> Dict:
+        """
+        Get the json data for the memo entry
+        """
+        memo_id = get_memo_entry_id(supplier_id, party_id, memo_number)
+        data = get_memo_entry(memo_id)
+        return data
+
     @classmethod
-    def from_dict(cls, data: Dict) -> MemoEntry:
+    def retrieve(cls, supplier_id: int, party_id: int, memo_number: int) -> MemoEntry:
+        """
+        Retrieve a memo entry from the database
+        """
+        data = cls.get_json(supplier_id, party_id, memo_number)
+        memo_entry = cls.from_dict(data, parse_memo_bills=True)
+
+        return memo_entry
+
+    @classmethod
+    def from_dict(cls, data: Dict, parse_memo_bills: bool = False) -> MemoEntry:
         # List of attribute names to be converted to integers
         int_attributes = ["memo_number",
-                            "supplier_id",
-                            "party_id",
-                            "amount",
-                            "selected_bills",
-                            "gr_amount",
-                            "deduction"]
-        
+                          "supplier_id",
+                          "party_id",
+                          "amount",
+                          "selected_bills",
+                          "gr_amount",
+                          "deduction"]
+
         # parse selected bills to only have "id"
         if "selected_bills" in data:
-            data["selected_bills"] = [int(bill["bill_number"]) for bill 
+            data["selected_bills"] = [int(bill["bill_number"]) for bill
                                       in data["selected_bills"]]
 
-        data = cls.convert_int_attributes(data, int_attributes)
+        # parse payments if required
+        if "payment" in data:
+            for payment_index in range(len(data["payment"])):
+                info = data["payment"][payment_index]
+                if "id" in info:
+                    info["bank_id"] = int(info["id"])
+                    del info["id"]
+                if "cheque" in info:
+                    info["cheque_number"] = int(info["cheque"])
+                    del info["cheque"]
+                data["payment"][payment_index] = info
 
-        return cls(**data)
+        data = cls.convert_int_attributes(data, int_attributes)
+        memo_entry = cls(**data)
+
+        if parse_memo_bills:
+            if "memo_bills" not in data:
+                raise DataError("Memo Bills not found in Data. MemoEntry from Dict Failed")
+            
+            memo_bills = data["memo_bills"]
+
+            memo_entry.memo_bills = [MemoBill.from_dict(
+                memo_bill) for memo_bill in memo_bills]
+            
+        return memo_entry
 
     @classmethod
-    def insert(cls, data: Dict, get_cls: bool=False) -> Dict:
+    def insert(cls, data: Dict, get_cls: bool = False) -> Dict:
         """
         Adds a memo to the database
         """
