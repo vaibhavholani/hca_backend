@@ -109,6 +109,99 @@ def get_memo_bills_by_id(memo_id: int) -> Dict:
     return data
 
 
+def get_memo_entry(memo_id: int) -> Dict:
+    """
+    Retrieve the dict required to create a memo entry object which has previously been inserted
+    """
+    # Define tables
+    memo_entry_table = Table('memo_entry')
+    memo_payments_table = Table('memo_payments')
+    memo_bills_table = Table('memo_bills')
+    part_payments_table = Table('part_payments')
+    
+    # Fetch basic memo data
+    select_query = Query.from_(memo_entry_table).select("*").where(memo_entry_table.id == memo_id)
+    memo_data = execute_query(select_query.get_sql())["result"][0]
+    
+    # Fetch associated payments
+    select_query = Query.from_(memo_payments_table).select("*").where(memo_payments_table.memo_id == memo_id)
+    payments_data = execute_query(select_query.get_sql())["result"]
+    
+    # Construct payment data in desired format
+    payments = [{'bank_id': p["bank_id"], 'cheque_number': p["cheque_number"]} for p in payments_data]
+    
+    # Fetch associated bills
+    select_query = Query.from_(memo_bills_table).select("*").where(memo_bills_table.memo_id == memo_id)
+    bills_data = execute_query(select_query.get_sql())["result"]
+    
+   # Determine the mode based on bills_data
+    mode = "Full"  # default to Full
+    for bill in bills_data:
+        if bill["type"] == "PR":
+            mode = "Part"
+            break
+    
+    # If the memo is of type 'Full', fetch associated part payments
+    part_payments = []
+    if mode == "Full":
+        select_query = Query.from_(part_payments_table).select("*").where(part_payments_table.use_memo_id == memo_id)
+        part_payments_data = execute_query(select_query.get_sql())["result"]
+        part_payments = [p["memo_id"] for p in part_payments_data]
+    
+    # Construct the final data dict
+    result = {
+        "memo_number": memo_data["memo_number"],
+        "supplier_id": memo_data["supplier_id"],
+        "party_id": memo_data["party_id"],
+        "amount": memo_data["amount"],
+        "gr_amount": memo_data.get("gr_amount", 0),
+        "deduction": memo_data.get("deduction", 0),
+        "register_date": memo_data["register_date"],
+        "mode": mode,
+        "memo_bills": bills_data,
+        "payment": payments
+    }
+    
+    if part_payments:
+        result["selected_part"] = part_payments
+    
+    return result
+
+def get_all_memo_entries(**kwargs): 
+    """
+    Get all memo entries only from memo_entry table
+    Designed to use for the view menu filtering
+    """
+    # create query to get all data from regsiter entry using pypika
+    memo_entry_table = Table('memo_entry')
+    select_query = Query.from_(memo_entry_table).select(
+        memo_entry_table.supplier_id,
+        memo_entry_table.party_id,
+        memo_entry_table.memo_number,
+        fn.ToChar(memo_entry_table.register_date, 'DD/MM/YYYY').as_("register_date"),
+        memo_entry_table.deduction,
+        memo_entry_table.gr_amount
+    )
+
+    if "supplier_id" in kwargs:
+        supplier_id = int(kwargs["supplier_id"])
+        select_query = select_query.where(
+            (memo_entry_table.supplier_id == supplier_id)
+        )
+
+    if "party_id" in kwargs:
+        party_id = int(kwargs["party_id"])
+        select_query = select_query.where(
+            (memo_entry_table.party_id == party_id)
+        )
+    
+    # Get the raw SQL query from the Pypika query
+    sql= select_query.get_sql()
+
+    # Execute the query and fetch data from the database
+    response = execute_query(sql)
+    return response["result"]
+
 def get_total_memo_entity(supplier_id: int,
                           party_id: int,
                           start_date: datetime.datetime,
