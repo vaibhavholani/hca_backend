@@ -14,11 +14,11 @@ def make_report(select, supplier_ids, party_ids, start_date, end_date):
     if isinstance(party_ids, int):
         party_ids = [party_ids]
     
-    options = ["khata_report", "supplier_register", "payment_list", "payment_list_summary", "grand_total_list", "legacy_payment_list" ]
+    options = ["khata_report", "supplier_register", "payment_list", "order_form", "payment_list_summary", "grand_total_list", "legacy_payment_list" ]
 
     party_ids, supplier_ids = efficiency.smart_selection(supplier_ids, party_ids, start_date, end_date)
 
-    if select in options[0:3]:
+    if select in options[0:4]:
         report_obj = report.Report(select, party_ids, supplier_ids, start_date, end_date)
         report_data = report_obj.generate_table()
         return report_data

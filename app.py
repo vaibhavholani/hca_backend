@@ -16,7 +16,7 @@ from API_Database import update_register_entry, update_memo_entry
 
 
 from backup import backup
-from Entities import RegisterEntry, MemoEntry
+from Entities import RegisterEntry, MemoEntry, OrderForm
 from Individual import Supplier, Party, Bank, Transporter
 from Reports import report_select, CustomEncoder
 from Legacy_Data import add_party, add_suppliers
@@ -120,7 +120,7 @@ def create_report():
 @app.route(BASE + '/add/individual', methods=['POST'])
 def add_individual():
     data = request.json
-
+    
     entity_mapping = {
         "supplier": Supplier,
         "party": Party,
@@ -141,6 +141,12 @@ def add_register_entry():
 def add_memo_entry():
     data = request.json
     response = MemoEntry.insert(data)
+    return jsonify(response)
+
+@app.route(BASE + '/add/order_form', methods=['POST'])
+def add_order_form_entry():
+    data = request.json
+    response = OrderForm.insert(data)
     return jsonify(response)
 
 
@@ -169,13 +175,10 @@ def get_id(table_name: str, id: int):
 def update_id(table_name: str):
     if request.method == 'POST':
         data = request.json
-        if table_name == "register_entry":
-            re = RegisterEntry.from_dict(data)
-            return update_register_entry.update_register_entry_by_id(re, int(data["id"]))
-        elif table_name == "memo_entry":
-            return update_memo_entry.update_memo_entry_from_obj(data)
-        else:
-            return edit_individual.edit_individual(data, table_name)
+        cls = table_class_mapper(table_name)
+        instance=cls.from_dict(data)
+        r_val = instance.update()
+        return jsonify(r_val)
 
 
 @app.route(BASE + '/delete/<string:table_name>', methods=['POST'])

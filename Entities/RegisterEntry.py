@@ -80,6 +80,9 @@ class RegisterEntry(Entry):
         return update_register_entry.update_register_entry_data(self)
     
     def get_id(self) -> int:
+        super_id = super().get_id()
+        if super_id is not None: return super_id
+        
         return get_register_entry_id(self.supplier_id,
                                     self.party_id, 
                                     self.bill_number,)

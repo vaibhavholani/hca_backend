@@ -13,6 +13,7 @@ def get_all_register_entries(**kwargs):
     # create query to get all data from regsiter entry using pypika
     register_entry_table = Table('register_entry')
     select_query = Query.from_(register_entry_table).select(
+        register_entry_table.id,
         register_entry_table.supplier_id,
         register_entry_table.party_id,
         register_entry_table.bill_number,
@@ -152,7 +153,6 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     """
 
     data = []
-
 
     query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
             "register_entry.amount::integer as bill_amt, register_entry.status as bill_status " \

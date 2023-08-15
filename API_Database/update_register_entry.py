@@ -11,7 +11,7 @@ def update_register_entry_data(entry: RegisterEntry) -> None:
    
     entry_id = entry.get_id()
 
-    update_register_entry_by_id(entry, entry_id)
+    return update_register_entry_by_id(entry, entry_id)
 
 def update_register_entry_by_id(entry: RegisterEntry, entry_id: int):
 

@@ -14,8 +14,19 @@ def smart_selection(suppliers: List[int], parties: List[int], start_date: dateti
     """
 
     db, cursor = db_connector.cursor()
-    query = "select supplier_id, party_id from register_entry where '{}' >= register_date or '{}' <= register_date"\
-        .format(str(end_date), str(start_date))
+
+    # Query to fetch supplier_id and party_id from both register_entry and order_form tables between the given dates
+    query = """
+    (SELECT supplier_id, party_id 
+     FROM register_entry 
+     WHERE register_date BETWEEN '{}' AND '{}')
+    UNION
+    (SELECT supplier_id, party_id 
+     FROM order_form 
+     WHERE register_date BETWEEN '{}' AND '{}')
+    """.format(str(start_date), str(end_date), str(start_date), str(end_date))
+
+
     cursor.execute(query)
     data = cursor.fetchall()
 
@@ -38,7 +49,13 @@ def filter_out_parties(supplier_id: int, parties: List[int]) -> List[int]:
     """
 
     db, cursor = db_connector.cursor()
-    query = "select party_id from register_entry where supplier_id = {}".format(supplier_id)
+    # Combining the query for register_entry and order_form using UNION
+    query = """
+        SELECT party_id FROM register_entry WHERE supplier_id = {}
+        UNION
+        SELECT party_id FROM order_form WHERE supplier_id = {}
+    """.format(supplier_id, supplier_id)
+
     cursor.execute(query)
     data = cursor.fetchall()
     smart_party = []
@@ -55,7 +72,12 @@ def filter_out_supplier(party_id: int, suppliers: List[int]) -> List[int]:
     Get all the suppliers the party has worked with
     """
     db, cursor = db_connector.cursor()
-    query = "select supplier_id from register_entry where party_id = {}".format(party_id)
+    query = """
+        SELECT supplier_id FROM register_entry WHERE party_id = {}
+        UNION
+        SELECT supplier_id FROM order_form WHERE party_id = {}
+    """.format(party_id, party_id)
+    
     cursor.execute(query)
     data = cursor.fetchall()
     smart_supplier = []

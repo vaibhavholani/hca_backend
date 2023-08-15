@@ -5,9 +5,14 @@ class Entry:
     
     def __init__(self, table_name: str, *args, **kwargs) -> None:
         self.table_name = table_name
+        
+        self.id = kwargs.get('id', None)
+        if self.id is not None:
+            self.id = int(self.id) 
+        
 
     def get_id(self) -> int:
-        raise NotImplementedError("get_id method not implemented for Entry Parent Class")
+        return self.id
     
     def delete(self) -> Dict:
         return delete_by_id(self.get_id(), self.table_name)
@@ -20,7 +25,7 @@ class Entry:
         for attr in int_attributes:
             if attr in obj:
                 if type(obj[attr]) == str:
-                    obj[attr] = int(obj[attr])
+                    obj[attr] = int(obj[attr].strip())
                 elif type(obj[attr]) == List:
                     obj[attr] = [int(x) for x in obj[attr]]
         

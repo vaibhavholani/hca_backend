@@ -43,7 +43,7 @@ def execute_query(query: str, dictCursor: bool = True, **kwargs):
     
     # Detect query type
     query_type = query.strip().split()[0].upper()
-    if query_type not in ["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE"]:
+    if query_type not in ["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP"]:
         raise DataError("Invalid query type")
     
     try:

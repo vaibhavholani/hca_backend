@@ -159,6 +159,7 @@ def get_memo_entry(memo_id: int) -> Dict:
     
     # Construct the final data dict
     result = {
+        "id": memo_data["id"],
         "memo_number": memo_data["memo_number"],
         "supplier_id": memo_data["supplier_id"],
         "party_id": memo_data["party_id"],

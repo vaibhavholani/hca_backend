@@ -1,6 +1,7 @@
 from psql import db_connector, execute_query
 from .retrieve_register_entry import get_all_register_entries
 from .retrieve_memo_entry import get_all_memo_entries
+from .retrieve_order_form import get_all_order_forms
 
 def get_all(table_name: str, **kwargs): 
 
@@ -8,6 +9,8 @@ def get_all(table_name: str, **kwargs):
         data = get_all_memo_entries(**kwargs)
     elif table_name == "register_entry":
         data = get_all_register_entries(**kwargs)
+    elif table_name == "order_form":
+        data = get_all_order_forms(**kwargs)
     else: 
         data = get_all_individual(table_name)
     
@@ -15,6 +18,6 @@ def get_all(table_name: str, **kwargs):
 
 def get_all_individual(table_name: str): 
     
-    sql = f"select id, name, address from {table_name}"
+    sql = f"select * from {table_name}"
     data = execute_query(sql)
     return data["result"]

@@ -99,7 +99,9 @@ class MemoEntry(Entry):
         # set bills status to F
         for bill in self.selected_bills:
             bill.status = "F"
+            
             pending_amount = bill.get_pending_amount()
+            
             # Add Memo Bills
             self.memo_bills.append(
                 MemoBill(bill.bill_number,
@@ -164,6 +166,9 @@ class MemoEntry(Entry):
                     self.memo_bills.append(memo_bill)
 
     def get_id(self) -> int:
+        super_id = super().get_id()
+        if super_id is not None: return super_id
+        
         return get_memo_entry_id(self.supplier_id,
                                  self.party_id,
                                  self.memo_number)

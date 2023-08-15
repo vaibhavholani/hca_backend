@@ -18,4 +18,4 @@ class Transporter(Individual):
 
     table_name = "transport"
     def __init__(self, name: str, address: str, *args, **kwargs):
-        super().__init__(name, address, self.table_name)
+        super().__init__(name, address, table_name=self.table_name, **kwargs)

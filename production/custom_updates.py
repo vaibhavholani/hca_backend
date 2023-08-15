@@ -1,19 +1,26 @@
 import os
 import sys
 sys.path.append("../")
-from psql import db_connector
+from psql import execute_query
 
-def execute_query(query: str) -> None:
-    db, cursor = db_connector.cursor()
-    cursor.execute(query)
-    db.commit()
-    db.close()
 
+def execute_sql_file(filename):
+    with open(filename, 'r') as f:
+        sql_commands = f.read().split(';')
+    
+    for command in sql_commands:
+        # Check if the command is empty or just whitespace
+        command = command.strip()
+        if command == '':
+            continue
+
+        status = execute_query(command)
+        print(f"Query Execution Status: {status} for Query: {command}")
 
 if __name__ == "__main__":
+
     try: 
-        query = "ALTER TABLE memo_entry ADD COLUMN gr_amount INT DEFAULT 0, ADD COLUMN deduction INT DEFAULT 0;"
-        execute_query(query)
+        execute_sql_file("custom_updates.sql")
     except Exception as e: 
         print("Error Occured: Please contact Vaibhav")
         print(e)

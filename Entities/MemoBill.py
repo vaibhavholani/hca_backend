@@ -24,7 +24,7 @@ class MemoBill(Entry):
                     *args,
                     **kwargs) -> None:
 
-        super().__init__(table_name=table_name)
+        super().__init__(table_name=table_name, *args, **kwargs)
         self.bill_number = bill_number
         self.amount = amount
         self.type = memo_type
@@ -33,6 +33,9 @@ class MemoBill(Entry):
         """
         Get the memo bill id from the database.
         """
+        super_id = super().get_id()
+        if super_id is not None: return super_id
+
         return get_memo_bill_id(memo_id=memo_id,
                                 bill_number=self.bill_number,
                                 type=self.type,

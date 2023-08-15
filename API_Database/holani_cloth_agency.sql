@@ -1,43 +1,50 @@
 CREATE SEQUENCE supplier_seq;
 
+-- supplier table
 CREATE TABLE supplier (
 	id INT DEFAULT NEXTVAL ('supplier_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
+	phone_number VARCHAR(20), -- Added column
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
-	);
-	
+);
+
+-- party table
 CREATE SEQUENCE party_seq;
 
 CREATE TABLE party (
 	id INT DEFAULT NEXTVAL ('party_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
+	phone_number VARCHAR(20), -- Added column
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
-	);
+);
 
+-- bank table
 CREATE SEQUENCE bank_seq;
 
 CREATE TABLE bank (
 	id INT DEFAULT NEXTVAL ('bank_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
+	phone_number VARCHAR(20), -- Added column
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
-	);
+);
 
+-- Transport table
 CREATE SEQUENCE Transport_seq;
 
 CREATE TABLE Transport (
 	id INT DEFAULT NEXTVAL ('Transport_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
+	phone_number VARCHAR(20), -- Added column
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
-	);
-
+);
 CREATE SEQUENCE register_entry_seq;
 
 CREATE TABLE register_entry (
@@ -113,6 +120,21 @@ CREATE TABLE part_payments(
 	FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
 	FOREIGN KEY (use_memo_id) REFERENCES memo_entry(id)
 	);
+
+CREATE SEQUENCE order_form_seq;
+
+CREATE TABLE order_form(
+    id INT DEFAULT nextval('order_form_seq') PRIMARY KEY,
+	supplier_id INT,
+	party_id INT,
+	order_form_number INT,
+	register_date TIMESTAMP(0),
+	status VARCHAR,
+	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (party_id) REFERENCES party(id),
+	FOREIGN KEY (supplier_id) REFERENCES supplier(id)
+	);
+
 
 CREATE TABLE last_update(
 	updated_at TIMESTAMP(0)

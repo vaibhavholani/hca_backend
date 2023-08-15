@@ -21,6 +21,18 @@ from psql import execute_query
 
 def insert_individual(entity, table):
     # Open a new connection
+    
+    # Base columns and values
+    columns = ['name', 'address']
+    values = [f"'{entity.name}'", f"'{entity.address}'"]
+    
+    # Add phone_number column and value if it's not None
+    if entity.phone_number is not None:
+        columns.append('phone_number')
+        values.append(f"'{entity.phone_number}'")
+    
+    columns_str = ', '.join(columns)
+    values_str = ', '.join(values)
 
-    sql = f"INSERT INTO {table} (name, address) VALUES ('{entity.name}', '{entity.address}')"
+    sql = f"INSERT INTO {table} ({columns_str}) VALUES ({values_str})"
     return execute_query(sql)

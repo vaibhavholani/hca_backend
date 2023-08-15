@@ -17,7 +17,7 @@ class Party(Individual):
     table_name = "party"
 
     def __init__(self, name: str, address: str, *args, **kwargs):
-        super().__init__(name, address, table_name=self.table_name)
+        super().__init__(name, address, table_name=self.table_name, **kwargs)
     
     @staticmethod
     def get_party_name_by_id(party_id: int) -> str:

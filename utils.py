@@ -1,4 +1,4 @@
-from Entities import RegisterEntry, MemoEntry
+from Entities import RegisterEntry, MemoEntry, OrderForm
 from Individual import Supplier, Party, Bank, Transporter
 from Exceptions import DataError
 
@@ -9,7 +9,8 @@ def table_class_mapper(table_name: str):
         "bank": Bank,
         "transport": Transporter,
         "register_entry": RegisterEntry,
-        "memo_entry": MemoEntry
+        "memo_entry": MemoEntry, 
+        "order_form": OrderForm
     }     
     if table_name not in entity_mapping:
         raise DataError("Table name not found in entity mapping")
