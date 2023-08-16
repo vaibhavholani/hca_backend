@@ -168,3 +168,6 @@ backups
 
 # ignore test_pypika file
 test_pypika.py
+
+# misc file
+zzz*
