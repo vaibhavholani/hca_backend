@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import List, Dict, Union
-from API_Database import utils, get_order_form 
+from API_Database import utils, get_order_form
 from API_Database import insert_order_form, update_order_form_data
 from API_Database import get_order_form_id, check_new_order_form
 from Exceptions import DataError
@@ -33,6 +33,7 @@ class OrderForm(Entry):
                  order_form_number: int,
                  register_date: Union[str, datetime],
                  status: str = "",
+                 delivered: bool = False,
                  table_name="order_form",
                  *args,
                  **kwargs) -> None:
@@ -42,16 +43,18 @@ class OrderForm(Entry):
         self.order_form_number = order_form_number
         self.register_date = utils.sql_date(utils.parse_date(register_date))
         self.status = status
+        self.delivered = delivered
 
-    def get_id(self) -> int: 
+    def get_id(self) -> int:
         super_id = super().get_id()
-        if super_id is not None: return super_id
+        if super_id is not None:
+            return super_id
 
         return get_order_form_id(self.supplier_id, self.party_id, self.order_form_number)
-        
+
     def update(self) -> Dict:
         return update_order_form_data(self)
-    
+
     @classmethod
     def from_dict(cls, data: Dict, *args, **kwargs) -> OrderForm:
         # List of attribute names to be converted to integers
@@ -64,13 +67,14 @@ class OrderForm(Entry):
 
     @classmethod
     def retrieve(cls, supplier_id: int, party_id: int, order_form_number: int) -> OrderForm:
-        order_form_data = get_order_form(supplier_id, party_id, order_form_number)
+        order_form_data = get_order_form(
+            supplier_id, party_id, order_form_number)
         return cls.from_dict(order_form_data)
 
     @classmethod
     def insert(cls, data: Dict, get_cls: bool = False) -> Dict:
         order_form = cls.from_dict(data)
-        
+
         # Check if the order form is new before insertion
         if check_new_order_form(order_form):
             ret = insert_order_form(order_form)

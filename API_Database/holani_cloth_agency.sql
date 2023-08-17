@@ -130,6 +130,7 @@ CREATE TABLE order_form(
 	order_form_number INT,
 	register_date TIMESTAMP(0),
 	status VARCHAR,
+	delivered boolean DEFAULT false,
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (party_id) REFERENCES party(id),
 	FOREIGN KEY (supplier_id) REFERENCES supplier(id)

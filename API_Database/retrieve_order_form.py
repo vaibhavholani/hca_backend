@@ -34,7 +34,8 @@ def get_order_form(supplier_id: int, party_id: int, order_form_number: int) -> D
         order_form_table.party_id,
         order_form_table.order_form_number,
         order_form_table.register_date,
-        order_form_table.status
+        order_form_table.status, 
+        order_form_table.delivered,
     ).where(
         (order_form_table.order_form_number == order_form_number) &
         (order_form_table.supplier_id == supplier_id) &
@@ -74,7 +75,8 @@ def get_all_order_forms(**kwargs):
         order_form_table.order_form_number,
         fn.ToChar(order_form_table.register_date,
                   'YYYY-MM-DD').as_("register_date"),
-        order_form_table.status
+        order_form_table.status,
+        order_form_table.delivered,
     )
 
     if "supplier_id" in kwargs:
@@ -124,7 +126,8 @@ def get_order_form_report_data(supplier_id: int, party_id: int, start_date: str,
                         order_form_table.status
     )
         .where((order_form_table.supplier_id == supplier_id) &
-               (order_form_table.party_id == party_id)))
+               (order_form_table.party_id == party_id) &
+               (order_form_table.delivered == False)))
 
     select_query = select_query.where(
         order_form_table.register_date.between(start_date, end_date))

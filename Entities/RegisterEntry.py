@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 from API_Database import insert_register_entry, update_register_entry, utils
 from API_Database import get_register_entry_id, get_register_entry
-from API_Database import get_pending_bills
+from API_Database import get_pending_bills, mark_order_forms_as_registered
 from Exceptions import DataError
 from Entities import Entry
 
@@ -136,6 +136,12 @@ class RegisterEntry(Entry):
         register_entry = cls.from_dict(data)
         if insert_register_entry.check_new_register(register_entry):
             ret = insert_register_entry.insert_register_entry(register_entry)
+
+            # Mark order forms as registered
+            if ret["status"] == "okay":
+                mark_order_forms_as_registered(register_entry.supplier_id,
+                                               register_entry.party_id)
+            
             if get_cls and ret["status"] == "okay":
                 ret["class"] = register_entry
             return ret
