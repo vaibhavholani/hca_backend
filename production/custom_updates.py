@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append("../")
 from psql import execute_query
+from Exceptions import DataError
 from Entities import MemoEntry
 
 def repair_data():
@@ -14,15 +15,25 @@ def repair_data():
 
     # Assuming MemoEntry class has a retrieve method
     for entry_data in memo_entry_del_data:
-        memo_entry = MemoEntry.retrieve(
-            supplier_id=entry_data["supplier_id"],
-            party_id=entry_data["party_id"],
-            memo_number=entry_data["memo_number"]
-        )
+        try:
+            supplier_id = entry_data["supplier_id"]
+            party_id = entry_data["party_id"]
+            memo_number = entry_data["memo_number"]
+            print(f"Processing supplier_id: {supplier_id}, party_id: {party_id} and memo_number: {memo_number}")
+            memo_entry = MemoEntry.retrieve(
+                supplier_id=supplier_id,
+                party_id=party_id,
+                memo_number=memo_number
+            )
         
-        if memo_entry:
-            # Assuming there's a delete method in MemoEntry class
-            memo_entry.delete()
+            if memo_entry:
+                # Assuming there's a delete method in MemoEntry class
+                memo_entry.delete()
+        except DataError as e:
+            print(e.error_dict)
+
+
+
     
 
 def execute_sql_file(filename):
