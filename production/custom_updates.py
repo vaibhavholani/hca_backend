@@ -40,14 +40,9 @@ def execute_sql_file(filename):
 
 if __name__ == "__main__":
 
-    try: 
-        execute_sql_file("custom_updates.sql")
-    except Exception as e: 
-        print("Error Occured: Please contact Vaibhav")
-        print(e)
-    try: 
-        repair_data()
-    except Exception as e: 
-        print("Error Occured: Please contact Vaibhav")
-        print(e)
-
+    # try: 
+    #     execute_sql_file("custom_updates.sql")
+    # except Exception as e: 
+    #     print("Error Occured: Please contact Vaibhav")
+    #     print(e)
+    repair_data()
