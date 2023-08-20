@@ -12,10 +12,12 @@ def run_basic_test():
         cleanup_list = []
 
         test_supplier_input = {"name": "test_supplier15",
-                               "address": "test_address"}
+                               "address": "test_address", 
+                               "phone_number": "9350544808"}
 
         test_party_input = {"name": "test_party15",
-                            "address": "test_address"}
+                            "address": "test_address", 
+                            "phone_number": "+1 647 901 4404"}
 
         # Create a supplier and party instance
         test_supplier = check_status_and_return_class(
@@ -44,6 +46,7 @@ def run_basic_test():
         # Retrieve the party
         test_party = Party.retrieve(test_party_id)
 
+        breakpoint()
         
         # Create Order Form
         order_form_number = 1
