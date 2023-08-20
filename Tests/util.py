@@ -1,12 +1,12 @@
 from __future__ import annotations
 from typing import Dict, Union, List
-from Entities import RegisterEntry, MemoEntry
+from Entities import RegisterEntry, MemoEntry, OrderForm
 from Individual import Supplier, Party
 from Exceptions import DataError
 # Import stack data structure
 from collections import deque
 
-def check_status_and_return_class(status: Dict) -> Union[Supplier, Party, RegisterEntry, MemoEntry]:
+def check_status_and_return_class(status: Dict) -> Union[Supplier, Party, RegisterEntry, MemoEntry, OrderForm]:
     if status["status"] == "okay":
         return status["class"]
     else:

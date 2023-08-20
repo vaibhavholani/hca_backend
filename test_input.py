@@ -1,6 +1,6 @@
 from typing import Dict, Union
 from Individual import Supplier, Party
-from Entities import RegisterEntry, MemoEntry
+from Entities import RegisterEntry, MemoEntry, OrderForm
 from Tests import TestKhataReport
 from Reports import make_report
 from Tests import check_status_and_return_class, cleanup
@@ -21,25 +21,58 @@ def run_basic_test():
         test_supplier = check_status_and_return_class(
             Supplier.insert(test_supplier_input, get_cls=True))
 
-        # Find the supplier and party id
+        # Add to cleanup
+        cleanup_list.append(test_supplier)
+
         test_supplier_id = test_supplier.get_id()
 
         # Retrieve the supplier
         test_supplier = Supplier.retrieve(test_supplier_id)
 
-        # Add to cleanup
-        cleanup_list.append(test_supplier)
+        # Find the supplier and party id
+        test_supplier_id = test_supplier.get_id()
 
+        # Add Test Party
         test_party = check_status_and_return_class(
             Party.insert(test_party_input, get_cls=True))
+
+        # Add to cleanup
+        cleanup_list.append(test_party)
 
         test_party_id = test_party.get_id()
 
         # Retrieve the party
         test_party = Party.retrieve(test_party_id)
 
+        
+        # Create Order Form
+        order_form_number = 1
+        order_form_input = {
+            "supplier_id": test_supplier_id,
+            "party_id": test_party_id,
+            "register_date": "2023-06-17", 
+            "order_form_number": order_form_number,
+        }
+
+        test_order_form = check_status_and_return_class(OrderForm.insert(order_form_input, get_cls=True))
+
         # Add to cleanup
-        cleanup_list.append(test_party)
+        cleanup_list.append(test_order_form)
+
+        # Retrieve the order form
+        test_order_form = OrderForm.retrieve(test_supplier_id, test_party_id, order_form_number)
+
+        # Create a Order Form Report
+        og_report = make_report("order_form", [test_supplier_id], [
+                                test_party_id], "2023-06-16", "2023-06-19")
+        
+        # Checking Report for correct order form data
+        order_form_data = og_report["headings"][0]["subheadings"][0]["dataRows"][0]
+        assert int(order_form_data["order_no"]) == order_form_number
+        assert order_form_data["order_date"] == "17/06/2023"
+        assert order_form_data["supp_name"] == test_supplier_input["name"]
+        assert order_form_data["party_name"] == test_party_input["name"]
+        assert len(og_report["headings"][0]["subheadings"]) == 1
 
         # Set Bill basics
         bill_amount = 5000
@@ -54,12 +87,17 @@ def run_basic_test():
         register_entry = check_status_and_return_class(
             RegisterEntry.insert(bill_input, get_cls=True))
 
+        # Add to cleanup
+        cleanup_list.append(register_entry)
+
         # retrieve the register entry
         register_entry = RegisterEntry.retrieve(
             test_supplier_id, test_party_id, "123456")
         
-        # Add to cleanup
-        cleanup_list.append(register_entry)
+        # Checking that there are no orderforms in the report
+        og_report = make_report("order_form", [test_supplier_id], [
+                                test_party_id], "2023-06-16", "2023-06-19")
+        assert len(og_report["headings"]) == 0
 
         # Create Khata Report
         og_report = make_report("khata_report", [test_supplier_id], [
@@ -95,15 +133,12 @@ def run_basic_test():
         part_memo = check_status_and_return_class(
             MemoEntry.insert(part_input, get_cls=True))
 
-        part_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, 38439)
-
         # Add to cleanup
         cleanup_list.append(part_memo)
 
-        part_memo_id = part_memo.get_id()
-        del_part_memo = True
+        part_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, 38439)
 
-        # print(test_supplier_id, test_party_id, 38439)
+        part_memo_id = part_memo.get_id()
 
         # Create second report
         # Create Khata Report
@@ -138,14 +173,11 @@ def run_basic_test():
         full_memo = check_status_and_return_class(
             MemoEntry.insert(full_input, get_cls=True))
         
-        # retrieve the memo entry
-        full_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, 3970)
-        
         # Add to cleanup
         cleanup_list.append(full_memo)
 
-        full_memo_id = full_memo.get_id()
-        del_full_memo = True
+        # retrieve the memo entry
+        full_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, 3970)
 
         # Get Updated Register Entry
         # TODO: Here I should be manually setting the status. Do I need to set other stuff, yes.
