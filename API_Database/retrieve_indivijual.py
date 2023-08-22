@@ -11,7 +11,7 @@ def get_all_names_ids(name: str) -> dict:
     # Open a new connection
     db, cursor = db_connector.cursor(True)
 
-    query = f"select id, name from {name}"
+    query = f"select id, name from {name} order by name;"
     cursor.execute(query)
     data = cursor.fetchall()
     db.close()
