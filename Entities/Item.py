@@ -58,14 +58,12 @@ class Item(Entry):
         return cls(**data)
 
     @classmethod
-    def retrieve(cls, supplier_id: int = None, name: str = None, color: str = None) -> Union[Item, List[Item]]:
+    def retrieve(cls, supplier_id: int, name: str, color: str) -> Union[Item, List[Item]]:
         """
         Retrieves an item or a list of items based on given criteria.
         """
         data = retrieve_item(supplier_id, name, color)
-        if not data:
-            return []
-        return [cls.from_dict(item) for item in data]
+        return cls.from_dict(data)
 
     @classmethod
     def get_cls(cls, supplier_id: int, name: str, color: str) -> Item:
