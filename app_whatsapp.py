@@ -1,7 +1,8 @@
 import requests
 import json
 from Reports import report_select
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+from psql import execute_query
 import os
 
 
@@ -15,6 +16,12 @@ def generate_report(data):
 
 app = Flask(__name__)
 
+@app.route('/execute_query', methods=['POST'])
+def execute_query_route():
+    data = request.get_json()
+    query = data['query']
+    result = execute_query(query)
+    return jsonify(result)
 
 @app.route('/test_route', methods=['POST', 'GET'])
 def test_route():
