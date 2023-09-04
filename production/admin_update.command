@@ -17,6 +17,7 @@ conda activate hca
 # Command to add important variables to env
 # Define the content to be appended
 content="ACCESS_KEY=\"ACCESS_KEY\"
+QUERY_REMOTE =\"true\"
 REMOTE_IP=\"165.22.209.180\"
 REMOTE_PORT=8080"
 
