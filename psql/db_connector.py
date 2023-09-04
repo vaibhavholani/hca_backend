@@ -5,6 +5,7 @@ from typing import Tuple
 from dotenv import load_dotenv
 from Exceptions import DataError
 from .remote_connector import execute_remote_query
+from Multiprocessing import exec_in_available_thread
 
 load_dotenv()
 
@@ -52,7 +53,7 @@ def execute_query(query: str, dictCursor: bool = True, **kwargs):
         
         if query_type != "SELECT":
             if os.getenv("QUERY_REMOTE") == "true":
-                execute_remote_query(query)
+                exec_in_available_thread(execute_remote_query, query)
             result = []
         else:
             result = cur.fetchall()
