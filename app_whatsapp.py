@@ -1,18 +1,29 @@
 import requests
 import json
+from Reports import report_select
+from flask import jsonify
 
-data = {'title': 'Khata Report', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Party Name: test_party15', 'subheadings': [{'title': 'Supplier Name: test_supplier15', 'dataRows': [{'bill_no': 123456, 'bill_date': '19/06/2023', 'bill_amt': '5,000', 'bill_status': 'N', 'memo_no': '', 'memo_amt': '', 'memo_date': '', 'chk_amt': '', 'memo_type': ''}], 'specialRows': [{'name': 'Subtotal', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Subtotal', 'value': '0', 'column': 'memo_amt', 'numeric': 0, 'beforeData': False}, {
-    'name': '0.00% GR (-)', 'value': '- 0', 'column': 'memo_amt', 'numeric': 0, 'beforeData': False}, {'name': '0.00% Less (-)', 'value': '- 0', 'column': 'memo_amt', 'numeric': 0, 'beforeData': False}, {'name': 'Total Paid (=)', 'value': '0', 'column': 'memo_amt', 'numeric': 0, 'beforeData': False}, {'name': 'Paid+GR (-)', 'value': '- 0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': 'Pending (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}], 'displayOnIndex': True}]}]}
+
+NPM_SERVER_PORT = 3001
+
+sample_data = {'suppliers': '[{"id":1685,"name":"SAI TEX FAB"}]', 'parties': '[{"id":530,"name":"SAMUNDER SAREE CENTER (D.K)"}]', 'report': 'khata_report', 'from': '2022-09-03', 'to': '2023-09-03'}
+
+
+def generate_report(data):
+    report_data = report_select.make_report(data)
+    return report_data
+
 
 # Convert the data to a JSON string
+data = generate_report(sample_data)
 json_data = json.dumps(data)
 
-# URL-encode the JSON string
-encoded_data = requests.utils.quote(json_data)
 
 # Send the GET request
-url = f"http://localhost:3000/generate-pdf?data={encoded_data}"
-response = requests.get(url)
+url = f"http://localhost:{NPM_SERVER_PORT}/generate-pdf"
+headers = {"Content-Type": "application/json"}
+response = requests.post(url, data=json_data, headers=headers)
+
 
 # Save the received PDF
 with open(f"{data['title']}.pdf", "wb") as f:
