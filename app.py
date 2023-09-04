@@ -16,7 +16,7 @@ from API_Database import update_register_entry, update_memo_entry
 
 
 from backup import backup
-from Entities import RegisterEntry, MemoEntry, OrderForm
+from Entities import RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry
 from Individual import Supplier, Party, Bank, Transporter
 from Reports import report_select, CustomEncoder
 from Legacy_Data import add_party, add_suppliers
@@ -105,14 +105,7 @@ def get_pending_bills(supplier_id: int, party_id: int):
 def create_report():
     if request.method == "POST":
         data = request.json
-        supplier_id = [element["id"]
-                       for element in json.loads(data["suppliers"])]
-        party_id = [element["id"] for element in json.loads(data["parties"])]
-        report = data['report']
-        start = data['from']
-        end = data['to']
-        report_data = report_select.make_report(
-            report, supplier_id, party_id, start, end)
+        report_data = report_select.make_report(data)
         return jsonify(report_data)
     return {"status": "okay"}
 
@@ -120,13 +113,28 @@ def create_report():
 @app.route(BASE + '/add/individual', methods=['POST'])
 def add_individual():
     data = request.json
-    
+
     entity_mapping = {
         "supplier": Supplier,
         "party": Party,
         "bank": Bank,
         "transport": Transporter}
-    
+
+    return entity_mapping[data["entity"]].insert(data)
+
+
+@app.route(BASE + '/add/entry', methods=['POST'])
+def add_entry():
+    data = request.json
+
+    entity_mapping = {
+        "register_entry": RegisterEntry,
+        "memo_entry": MemoEntry,
+        "order_form": OrderForm,
+        "item": Item,
+        "item_entry": ItemEntry
+    }
+
     return entity_mapping[data["entity"]].insert(data)
 
 
@@ -142,6 +150,7 @@ def add_memo_entry():
     data = request.json
     response = MemoEntry.insert(data)
     return jsonify(response)
+
 
 @app.route(BASE + '/add/order_form', methods=['POST'])
 def add_order_form_entry():
@@ -162,6 +171,7 @@ def add_legacy():
 def get_all():
     if request.method == 'POST':
         data = request.json
+
         return json.dumps(retrieve_all.get_all(**data), cls=CustomEncoder)
 
 
@@ -176,7 +186,7 @@ def update_id(table_name: str):
     if request.method == 'POST':
         data = request.json
         cls = table_class_mapper(table_name)
-        instance=cls.from_dict(data)
+        instance = cls.from_dict(data)
         r_val = instance.update()
         return jsonify(r_val)
 
@@ -186,7 +196,7 @@ def delete(table_name: str):
     if request.method == 'POST':
         data = request.json
         cls = table_class_mapper(table_name)
-        instance=cls.from_dict(data, parse_memo_bills=True)
+        instance = cls.from_dict(data, parse_memo_bills=True)
         r_val = instance.delete()
         return jsonify(r_val)
 

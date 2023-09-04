@@ -30,6 +30,7 @@ def get_order_form(supplier_id: int, party_id: int, order_form_number: int) -> D
 
     # Build the SELECT query using Pypika
     select_query = Query.from_(order_form_table).select(
+        order_form_table.id,
         order_form_table.supplier_id,
         order_form_table.party_id,
         order_form_table.order_form_number,

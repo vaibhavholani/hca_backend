@@ -59,11 +59,14 @@ class ItemEntry(Entry):
         return cls(**data)
 
     @classmethod
-    def retrieve(cls, register_entry_id: int = None, item_id: int = None) -> ItemEntry:
+    def retrieve(cls, register_entry_id: int = None, item_id: int = None) -> Union[ItemEntry, List[ItemEntry]]:
         """
         Retrieves an item entry or a list of item entries based on given criteria.
         """
         data = retrieve_item_entry(register_entry_id, item_id)
+
+        if isinstance(data, list):
+            return [cls.from_dict(entry) for entry in data]
         return cls.from_dict(data)
 
     @classmethod

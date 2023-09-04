@@ -13,6 +13,7 @@ from API_Database import get_register_entry_id, get_register_entry
 from API_Database import get_pending_bills, mark_order_forms_as_registered
 from Exceptions import DataError
 from Entities import Entry
+from .ItemEntry import ItemEntry
 
 
 class RegisterEntry(Entry):
@@ -89,6 +90,13 @@ class RegisterEntry(Entry):
     
     def delete(self) -> Dict:
         if self.status == "N":
+            # Delete Item Entries associated with this Register Entry
+            item_entries = ItemEntry.retrieve(register_entry_id=self.get_id())
+            # if  item_entries is a list
+            if isinstance(item_entries, list):
+                [item_entry.delete() for item_entry in item_entries]
+            else:
+                item_entries.delete()
             return super().delete()
         else:
             return {"status": "error",
