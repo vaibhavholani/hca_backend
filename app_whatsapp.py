@@ -16,7 +16,7 @@ def generate_report(data):
 app = Flask(__name__)
 
 
-@app.route('/test_route', methods=['POST'])
+@app.route('/test_route', methods=['POST', 'GET'])
 def test_route():
 
     data = generate_report(sample_data)
