@@ -53,8 +53,6 @@ def create_token():
     return jsonify(access_token=access_token)
 
 # Error Handler
-
-
 @app.errorhandler(DataError)
 def handle_data_error(e):
     error = e.dict()

@@ -13,7 +13,7 @@ def execute_sql_file(filename):
         if command == '':
             continue
         print(f"Executing Query: {command}")
-        status = execute_query(command)
+        status = execute_query(command, exec_remote=False)
         print(f"Query Execution Status: {status} for Query: {command}")
 
 if __name__ == "__main__":

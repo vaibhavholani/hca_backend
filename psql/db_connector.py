@@ -36,7 +36,7 @@ def cursor(dict = False) -> Tuple:
         db_cursor = database.cursor()
     return database, db_cursor
 
-def execute_query(query: str, dictCursor: bool = True, **kwargs):
+def execute_query(query: str, dictCursor: bool = True, exec_remote: bool = True, **kwargs):
     """
     Executes a query and returns the result
     """
@@ -52,7 +52,7 @@ def execute_query(query: str, dictCursor: bool = True, **kwargs):
         cur.execute(query)
         
         if query_type != "SELECT":
-            if os.getenv("QUERY_REMOTE") == "true":
+            if exec_remote and os.getenv("QUERY_REMOTE") == "true":
                 exec_in_available_thread(execute_remote_query, query)
             result = []
         else:

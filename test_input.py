@@ -227,7 +227,6 @@ def run_basic_test():
             test_supplier_id], "2023-06-19", "2023-06-19")
         report_data = report.generate_table([register_entry], [full_memo])
 
-        breakpoint()
         assert og_report == report_data
 
         # cleanup

@@ -3,6 +3,7 @@ import json
 from Reports import report_select
 from flask import Flask, jsonify, request
 from psql import execute_query
+from Exceptions import DataError
 import os
 
 
@@ -15,6 +16,18 @@ def generate_report(data):
     return report_data
 
 app = Flask(__name__)
+
+
+# Error Handler
+@app.errorhandler(DataError)
+def handle_data_error(e):
+    error = e.dict()
+    if error["status"] == "error" and "input_errors" not in error:
+        error["input_errors"] = {}
+    print("returning error")
+    print(error)
+    return jsonify(error), 500
+
 
 @app.route('/execute_query', methods=['POST'])
 def execute_query_route():

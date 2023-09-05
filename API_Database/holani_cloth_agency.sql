@@ -160,6 +160,16 @@ CREATE TABLE item_entry (
     FOREIGN KEY (item_id) REFERENCES item(id)
 );
 
+CREATE SEQUENCE remote_query_logs_seq;
+
+CREATE TABLE remote_query_logs (
+	id INT DEFAULT nextval('remote_query_logs_seq') PRIMARY KEY,
+    query_text TEXT NOT NULL,
+    http_response_status INTEGER,
+    query_status VARCHAR(100),
+    message TEXT
+);
+
 
 CREATE TABLE last_update(
 	updated_at TIMESTAMP(0)

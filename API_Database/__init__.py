@@ -30,4 +30,6 @@ from .insert_item_entry import insert_item_entry
 from .retrieve_item_entry import get_item_entry_id, retrieve_item_entry, get_all_item_entries
 from .update_item_entry import update_item_entry
 
+from .insert_remote_query_log import insert_remote_query_log
+
 from .delete_entry import delete_by_id, delete_memo_payments

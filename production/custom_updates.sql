@@ -21,3 +21,13 @@ CREATE TABLE item_entry (
     FOREIGN KEY (register_entry_id) REFERENCES register_entry(id),
     FOREIGN KEY (item_id) REFERENCES item(id)
 );
+
+CREATE SEQUENCE remote_query_logs_seq;
+
+CREATE TABLE remote_query_logs (
+	id INT DEFAULT nextval('remote_query_logs_seq') PRIMARY KEY,
+    query_text TEXT NOT NULL,
+    http_response_status INTEGER,
+    query_status VARCHAR(100),
+    message TEXT
+);
