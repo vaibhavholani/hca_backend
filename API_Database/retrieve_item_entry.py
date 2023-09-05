@@ -29,9 +29,9 @@ def retrieve_item_entry(register_entry_id: int, item_id: int) -> Union[List[Dict
     # todo: CHANGE THIS SUCH THAT IT CAN RETURN A LIST
     result = get_all_item_entries(register_entry_id, item_id)
 
-    if len(result) == 0:
-        raise DataError(
-            f"No Item Entry found with given criteria: Register Entry id: {register_entry_id}, Item id: {item_id}")
+    # if len(result) == 0:
+    #     raise DataError(
+    #         f"No Item Entry found with given criteria: Register Entry id: {register_entry_id}, Item id: {item_id}")
 
     if register_entry_id and item_id:
         if len(result) != 1:

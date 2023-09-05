@@ -51,7 +51,6 @@ def execute_remote_query(query, server_url=SERVER_URL):
         return {"status": "error", "message": "Unable to connect to the server."}
     except requests.HTTPError:
         error_msg = f"HTTP Error {response.status_code}: {response.text}"
-        print(error_msg)
         insert_remote_query_log(
             query, response.status_code, "HTTPError", error_msg)
         return {"status": "error", "message": error_msg}
@@ -62,6 +61,5 @@ def execute_remote_query(query, server_url=SERVER_URL):
         return {"status": "error", "message": "Error occurred while making the request."}
     except Exception as e:
         error_msg = f"An unexpected error occurred: {e}"
-        print(error_msg)
         insert_remote_query_log(query, 999, "Exception", error_msg)
         return {"status": "error", "message": error_msg}
