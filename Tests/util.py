@@ -1,12 +1,12 @@
 from __future__ import annotations
 from typing import Dict, Union, List
-from Entities import RegisterEntry, MemoEntry, OrderForm
+from Entities import RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry
 from Individual import Supplier, Party
 from Exceptions import DataError
 # Import stack data structure
 from collections import deque
 
-def check_status_and_return_class(status: Dict) -> Union[Supplier, Party, RegisterEntry, MemoEntry, OrderForm]:
+def check_status_and_return_class(status: Dict) -> Union[Supplier, Party, RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry]:
     if status["status"] == "okay":
         return status["class"]
     else:
@@ -53,7 +53,7 @@ def print_dict_diff(dict1, dict2, path=""):
             print(f"Value in dict1 = {dict1}")
             print(f"Value in dict2 = {dict2}")
 
-def cleanup(cls: List[Union[Supplier, Party, RegisterEntry, MemoEntry]]):
+def cleanup(cls: List[Union[Supplier, Party, RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry]]):
 
     while len(cls) > 0:
         obj = cls.pop()

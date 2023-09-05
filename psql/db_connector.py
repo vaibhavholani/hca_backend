@@ -4,13 +4,15 @@ import os
 from typing import Tuple
 from dotenv import load_dotenv
 from Exceptions import DataError
+from .remote_connector import execute_remote_query
+from Multiprocessing import exec_in_available_thread
 
+load_dotenv()
 
 def connect():
     """
     Provides a reference to the database and its cursor
     """
-    load_dotenv()
 
     mydb  = psycopg2.connect(
         dbname=os.getenv("DB_NAME"), 
@@ -21,8 +23,6 @@ def connect():
     # DATABASE_URL = os.environ['DATABASE_URL']
     # mydb = psycopg2.connect(DATABASE_URL, sslmode="require")
     return mydb
-
-
 
 
 def cursor(dict = False) -> Tuple:
@@ -36,7 +36,7 @@ def cursor(dict = False) -> Tuple:
         db_cursor = database.cursor()
     return database, db_cursor
 
-def execute_query(query: str, dictCursor: bool = True, **kwargs):
+def execute_query(query: str, dictCursor: bool = True, exec_remote: bool = True, **kwargs):
     """
     Executes a query and returns the result
     """
@@ -52,6 +52,8 @@ def execute_query(query: str, dictCursor: bool = True, **kwargs):
         cur.execute(query)
         
         if query_type != "SELECT":
+            if exec_remote and os.getenv("QUERY_REMOTE") == "true":
+                exec_in_available_thread(execute_remote_query, query)
             result = []
         else:
             result = cur.fetchall()

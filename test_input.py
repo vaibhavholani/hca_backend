@@ -1,9 +1,30 @@
-from typing import Dict, Union
+from typing import Dict, Union, List
 from Individual import Supplier, Party
-from Entities import RegisterEntry, MemoEntry, OrderForm
+from Entities import RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry
 from Tests import TestKhataReport
 from Reports import make_report
 from Tests import check_status_and_return_class, cleanup
+
+def item_test(supplier_id: int, cleanup_list: List) -> Item:
+
+    # Create an Item
+    item_input = {"name": "Super Shiny Saree",
+                    "supplier_id": supplier_id}
+    test_item = check_status_and_return_class(Item.insert(item_input, get_cls=True))
+    cleanup_list.append(test_item)
+
+    return test_item
+
+def item_entry_test(register_entry_id: int, item_id: int) -> ItemEntry:
+
+     # Create an Item Entry
+    item_entry_input = {"register_entry_id": register_entry_id,
+                        "item_id": item_id,
+                        "quantity": 10,
+                        "rate": 1000}
+
+    test_item_entry = check_status_and_return_class(ItemEntry.insert(item_entry_input, get_cls=True))
+    return test_item_entry
 
 
 def run_basic_test():
@@ -46,8 +67,10 @@ def run_basic_test():
         # Retrieve the party
         test_party = Party.retrieve(test_party_id)
 
-        breakpoint()
-        
+        # Create Item
+        test_item = item_test(test_supplier_id, cleanup_list)
+        test_item_id = test_item.get_id()
+
         # Create Order Form
         order_form_number = 1
         order_form_input = {
@@ -97,6 +120,8 @@ def run_basic_test():
         register_entry = RegisterEntry.retrieve(
             test_supplier_id, test_party_id, "123456")
         
+        register_entry_id = register_entry.get_id()
+        
         # Checking that there are no orderforms in the report
         og_report = make_report("order_form", [test_supplier_id], [
                                 test_party_id], "2023-06-16", "2023-06-19")
@@ -110,6 +135,9 @@ def run_basic_test():
         report = TestKhataReport("khata_report", [test_party_id], [
             test_supplier_id], "2023-06-19", "2023-06-19")
         report_data = report.generate_table([register_entry], [])
+
+        # Add Item and Item Entries asscoiated with register entry
+        test_item_entry = item_entry_test(register_entry_id, test_item_id)
 
         assert og_report == report_data
 
