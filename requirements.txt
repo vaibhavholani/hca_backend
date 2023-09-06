@@ -8,3 +8,4 @@ pypika
 phonenumbers
 reportlab
 requests
+fuzzywuzzy
