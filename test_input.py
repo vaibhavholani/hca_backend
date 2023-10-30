@@ -32,11 +32,11 @@ def run_basic_test():
         # create cleanup list
         cleanup_list = []
 
-        test_supplier_input = {"name": "test_supplier15",
+        test_supplier_input = {"name": "test_supplier14",
                                "address": "test_address", 
                                "phone_number": "9350544808"}
 
-        test_party_input = {"name": "test_party15",
+        test_party_input = {"name": "test_party14",
                             "address": "test_address", 
                             "phone_number": "+1 647 901 4404"}
 

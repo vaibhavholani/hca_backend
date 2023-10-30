@@ -9,12 +9,27 @@ sys.path.append("../")
 
 def make_report(data: Dict) -> Dict:
 
+    # check if suppliers/parties are in json format
+    if isinstance(data["suppliers"], str):
+        suppliers = json.loads(data["suppliers"])
+        parties = json.loads(data["parties"])
+    else:
+        suppliers = data["suppliers"]
+        parties = data["parties"]
+
     supplier_ids = [element["id"]
-                    for element in json.loads(data["suppliers"])]
-    party_ids = [element["id"] for element in json.loads(data["parties"])]
+                    for element in suppliers]
+    party_ids = [element["id"] for element in parties]
     select = data['report']
     start_date = data['from']
     end_date = data['to']
+    
+    # Flag for all_parties and all_supplier option
+    all=False
+
+    # check if data has a all option
+    if "all" in data:
+        all = data["all"]
 
     # if supplier_ids or party_ids are ints, convert them to lists
     if isinstance(supplier_ids, int):
@@ -28,9 +43,12 @@ def make_report(data: Dict) -> Dict:
     party_ids, supplier_ids = efficiency.smart_selection(
         supplier_ids, party_ids, start_date, end_date)
 
+    # Create a all all report
+    # Start with khata report
+    
     if select in options[0:4]:
         report_obj = report.Report(
-            select, party_ids, supplier_ids, start_date, end_date)
+            select, party_ids, supplier_ids, start_date, end_date, all=all)
         report_data = report_obj.generate_table()
         return report_data
 
@@ -45,4 +63,4 @@ def make_report(data: Dict) -> Dict:
             party_ids, supplier_ids, start_date, end_date)
     else:
         raise Exception("Invalid Option")
-    return report_obj
+    

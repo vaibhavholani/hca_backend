@@ -25,7 +25,7 @@ class KhataReport(table.HeaderSubheaderTable):
           try:
             for row in data_rows:
                 if column in row:
-                  amount = int(row[column]) if row[column] != "" else 0
+                  amount = int(row[column]) if (row[column] != "" and row[column] is not None) else 0
                   total += amount
                   if column == "memo_amt" and "memo_type" in row:
                     if row["memo_type"] == "G":
