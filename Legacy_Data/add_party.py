@@ -1,7 +1,6 @@
 import sys
 sys.path.append("../")
 from Individual import Party
-from API_Database import insert_individual
 
 party_data = """P	JAGDAMBA ENTERPRISE	JAGDAMBA	1
 P	SHIVAM SAREE	SHIVAM	2
@@ -364,12 +363,11 @@ P	ADVIKA CREATIONS	ADVIKA C.	359"""
 def add():
     split_data = party_data.split("\n")
 
-    party_names = [y.split("\t")[1] for y in split_data]
+    party_names = [{"name":y.split("\t")[1], "address":""} for y in split_data]
 
-    parties = [Party.create_party(party, "N/A") for party in party_names]
 
-    for elements in parties:
-        insert_individual.insert_party(elements)
+    for parties in party_names:
+        Party.insert(parties)
 
 if __name__ == "__main__":
 	add()

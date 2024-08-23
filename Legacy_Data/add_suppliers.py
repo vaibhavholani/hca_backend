@@ -1,7 +1,7 @@
 import sys
 sys.path.append("../")
 from Individual import Supplier
-from API_Database import insert_individual
+
 
 supplier_data = """S	SHREE KUNJ BIHARI SAREES	SHREE K,B,	0
 S	RAGHUPATI SAREES	RAGHUPATI	1
@@ -1348,12 +1348,12 @@ S	SAI SAREES	SAI SAREES	1371"""
 def add():
     split_data = supplier_data.split("\n")
 
-    supplier_names = [y.split("\t")[1] for y in split_data]
+    # Create a list of dictionaries with supplier names and their addresses
+    supplier_data_list = [{"name": y.split("\t")[1], "address": ""} for y in split_data]
 
-    suppliers = [Supplier.create_supplier(supplier, "N/A") for supplier in supplier_names]
-
-    for elements in suppliers:
-        insert_individual.insert_supplier(elements)
+    # Insert each supplier using the insert method
+    for supplier in supplier_data_list:
+        Supplier.insert(supplier)
 
 
 if __name__ == "__main__":

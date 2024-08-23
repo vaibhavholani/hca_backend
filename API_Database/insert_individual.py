@@ -21,10 +21,13 @@ from psql import execute_query
 
 def insert_individual(entity, table):
     # Open a new connection
+    def remove_single_quotes(value):
+        return value.replace("'", "")
     
     # Base columns and values
     columns = ['name', 'address']
-    values = [f"'{entity.name}'", f"'{entity.address}'"]
+    values = [f"'{remove_single_quotes(entity.name)}'", f"'{remove_single_quotes(entity.address)}'"]
+
     
     # Add phone_number column and value if it's not None
     if entity.phone_number is not None:

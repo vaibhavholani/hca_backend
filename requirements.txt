@@ -12,3 +12,4 @@ pypika
 phonenumbers
 reportlab
 requests
+supabase
