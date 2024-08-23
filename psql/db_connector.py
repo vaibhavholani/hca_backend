@@ -3,6 +3,7 @@ from psycopg2.extras import (RealDictCursor, )
 import os
 from typing import Tuple
 from dotenv import load_dotenv
+
 from Exceptions import DataError
 from .remote_connector import execute_remote_query
 from Multiprocessing import exec_in_available_thread
@@ -18,7 +19,9 @@ def connect():
         dbname=os.getenv("DB_NAME"), 
         user=os.getenv("DB_USER"), 
         password=os.getenv("DB_PASSWORD"), 
-        host="localhost")
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+    )
 
     # DATABASE_URL = os.environ['DATABASE_URL']
     # mydb = psycopg2.connect(DATABASE_URL, sslmode="require")
