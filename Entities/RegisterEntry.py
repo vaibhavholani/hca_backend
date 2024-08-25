@@ -13,6 +13,7 @@ from API_Database import get_register_entry_id, get_register_entry
 from API_Database import get_pending_bills, mark_order_forms_as_registered
 from Exceptions import DataError
 from Entities import Entry
+from OCR import parse_register_entry
 from .ItemEntry import ItemEntry
 
 
@@ -101,10 +102,19 @@ class RegisterEntry(Entry):
         else:
             return {"status": "error",
                     "message": "Register Entry has been paid"}
+    
     @staticmethod
     def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
         pending_bills_data = get_pending_bills(supplier_id, party_id)
         return pending_bills_data
+    
+    @staticmethod
+    def process_bill_image(image) -> Dict:
+        """
+        Process the image of a bill and return the extracted data
+        IMPORTANT: image must be a base64 encoded string in jpeg format
+        """
+        return parse_register_entry(image)
 
     @classmethod
     def from_dict(cls, data: Dict, *args, **kwargs) -> RegisterEntry:
