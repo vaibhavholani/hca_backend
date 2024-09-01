@@ -4,12 +4,12 @@ from psql import db_connector, execute_query
 from pypika import Query, Table, Field, functions as fn
 from Exceptions import DataError
 
-def get_all_names_ids(name: str) -> dict:
+def get_all_names_ids(name: str, dict_cursor: bool = True) -> dict:
     """
     Get all <name> ids and names returned in a dictionary
     """
     # Open a new connection
-    db, cursor = db_connector.cursor(True)
+    db, cursor = db_connector.cursor(dict_cursor)
 
     query = f"select id, name from {name} order by name;"
     cursor.execute(query)
