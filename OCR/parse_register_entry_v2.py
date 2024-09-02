@@ -12,14 +12,31 @@ dotenv.load_dotenv()
 
 
 def _parse_response(response):
+    
+    
     sample_data ={
                 "supplier_name": "SAI TEX FAB",
-                "party_name": "SAMUNDER SAREE CENTRE",
+                "party_name": "SAMUNDER SAREE CENTRE (D.K)",
                 "date": "18/04/2023",
                 "bill_number": 107,
                 "amount": 69764
                 }
+    
+    sample_data_2 ={
+                "supplier_name": "SAI TEX FAB",
+                "party_name": None,
+                "date": "18/04/2023",
+                "bill_number": 107,
+                "amount": 69764
+                }
+    
+    
+    
     return sample_data
+
+
+
+
     try:
         # Ensure response is a valid JSON object
         response = response.json()
