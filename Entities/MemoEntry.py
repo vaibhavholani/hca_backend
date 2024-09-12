@@ -11,7 +11,7 @@ from .RegisterEntry import RegisterEntry
 from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
-from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id
+from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id, get_memo_bills_by_id
 from API_Database import update_part_payment
 from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
@@ -169,7 +169,7 @@ class MemoEntry(Entry):
         super_id = super().get_id()
         if super_id is not None: return super_id
         
-        return get_memo_entry_id(self.supplier_id,
+        return MemoEntry.get_memo_entry_id(self.supplier_id,
                                  self.party_id,
                                  self.memo_number)
 
@@ -210,13 +210,34 @@ class MemoEntry(Entry):
                                                   register_date)
 
     @staticmethod
+    def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
+        """
+        Get the memo entry id
+        """
+        return get_memo_entry_id(supplier_id, party_id, memo_number)
+
+    @staticmethod
+    def get_memo_entry(memo_id: int) -> Dict:
+        """
+        Get the memo entry
+        """
+        return get_memo_entry(memo_id)
+
+    @staticmethod
     def get_json(supplier_id: int, party_id: int, memo_number: int) -> Dict:
         """
         Get the json data for the memo entry
         """
-        memo_id = get_memo_entry_id(supplier_id, party_id, memo_number)
-        data = get_memo_entry(memo_id)
+        memo_id = MemoEntry.get_memo_entry_id(supplier_id, party_id, memo_number)
+        data = MemoEntry.get_memo_entry(memo_id)
         return data
+
+    @staticmethod
+    def get_memo_bills_by_id(memo_id: int) -> List[Dict]:
+        """
+        Get the memo bills for a memo entry
+        """
+        return get_memo_bills_by_id(memo_id)
 
     @classmethod
     def retrieve(cls, supplier_id: int, party_id: int, memo_number: int) -> MemoEntry:
@@ -243,6 +264,7 @@ class MemoEntry(Entry):
         if "selected_bills" in data:
             data["selected_bills"] = [int(bill["bill_number"]) for bill
                                       in data["selected_bills"]]
+                                      
 
         # parse payments if required
         if "payment" in data:

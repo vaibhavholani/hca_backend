@@ -36,7 +36,7 @@ class MemoBill(Entry):
         super_id = super().get_id()
         if super_id is not None: return super_id
 
-        return get_memo_bill_id(memo_id=memo_id,
+        return MemoBill.get_memo_bill_id(memo_id=memo_id,
                                 bill_number=self.bill_number,
                                 type=self.type,
                                 amount=self.amount)
@@ -84,6 +84,16 @@ class MemoBill(Entry):
         ret = delete_by_id(memo_bill_id, self.table_name)
 
         return ret
+    
+    @staticmethod
+    def get_memo_bill_id(memo_id: int, bill_number: int, type: str, amount: int) -> int:
+        """
+        Get the memo bill id from the database.
+        """
+        return get_memo_bill_id(memo_id=memo_id,
+                                bill_number=bill_number,
+                                type=type,
+                                amount=amount)
 
     @classmethod
     def from_dict(cls, data: Dict, *args, **kwargs) -> MemoBill:

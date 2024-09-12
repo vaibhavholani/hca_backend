@@ -61,7 +61,7 @@ def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, reg
     
     return data[0][0]
 
-
+# @deprecated
 def check_unique_bill_number(supplier_id: int, party_id: int, bill_number: int, date: str) -> bool:
     """
     Check if the bill number if unique
