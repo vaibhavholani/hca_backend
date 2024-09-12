@@ -8,11 +8,10 @@ def check_new_register(entry) -> bool:
     """
     Check if the register_entry already exists.
     """
-
+    
     # Open a new connection
-
-    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}'".format(
-        entry.bill_number, entry.supplier_id, entry.party_id)
+    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'".format(
+        entry.bill_number, entry.supplier_id, entry.party_id, entry.register_date)
     response = execute_query(query)
     if len(response["result"]) == 0:
         return True

@@ -46,15 +46,15 @@ def get_all_register_entries(**kwargs):
 
     
 
-def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int) -> int:
+def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, register_date: str) -> int:
     """
     Returns primary key id of the register entry
     """
 
-    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' " \
+    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'" \
             "order by " \
             "register_date DESC". \
-        format(bill_number, supplier_id, party_id)
+        format(bill_number, supplier_id, party_id, register_date)
     
     result = db_connector.execute_query(query, False)
     data = result["result"]

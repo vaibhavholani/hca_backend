@@ -86,7 +86,8 @@ class RegisterEntry(Entry):
         
         return get_register_entry_id(self.supplier_id,
                                     self.party_id, 
-                                    self.bill_number,)
+                                    self.bill_number,
+                                    self.register_date)
     
     def delete(self) -> Dict:
         if self.status == "N":
