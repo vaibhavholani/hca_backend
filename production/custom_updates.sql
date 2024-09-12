@@ -1,1 +1,2 @@
-select * from party;
+delete from supplier;
+delete from party;
