@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Union, List
 from Individual import Supplier, Party
 from Entities import RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry
@@ -89,8 +90,13 @@ def run_basic_test():
         test_order_form = OrderForm.retrieve(test_supplier_id, test_party_id, order_form_number)
 
         # Create a Order Form Report
-        og_report = make_report("order_form", [test_supplier_id], [
-                                test_party_id], "2023-06-16", "2023-06-19")
+        og_report = make_report({
+            "report": "order_form",
+            "suppliers": json.dumps([{"id": test_supplier_id}]),
+            "parties": json.dumps([{"id": test_party_id}]),
+            "from": "2023-06-16",
+            "to": "2023-06-19"
+        })
         
         # Checking Report for correct order form data
         order_form_data = og_report["headings"][0]["subheadings"][0]["dataRows"][0]
@@ -123,13 +129,23 @@ def run_basic_test():
         register_entry_id = register_entry.get_id()
         
         # Checking that there are no orderforms in the report
-        og_report = make_report("order_form", [test_supplier_id], [
-                                test_party_id], "2023-06-16", "2023-06-19")
+        og_report = make_report({
+            "report": "order_form",
+            "suppliers": json.dumps([{"id": test_supplier_id}]),
+            "parties": json.dumps([{"id": test_party_id}]),
+            "from": "2023-06-16",
+            "to": "2023-06-19"
+        })
         assert len(og_report["headings"]) == 0
 
         # Create Khata Report
-        og_report = make_report("khata_report", [test_supplier_id], [
-                                test_party_id], "2023-06-19", "2023-06-19")
+        og_report = make_report({
+            "report": "khata_report",
+            "suppliers": json.dumps([{"id": test_supplier_id}]),
+            "parties": json.dumps([{"id": test_party_id}]),
+            "from": "2023-06-19",
+            "to": "2023-06-19"
+        })
 
         # Want to create a khata report here and check the output
         report = TestKhataReport("khata_report", [test_party_id], [
@@ -173,8 +189,13 @@ def run_basic_test():
 
         # Create second report
         # Create Khata Report
-        og_report = make_report("khata_report", [test_supplier_id], [
-                                test_party_id], "2023-06-19", "2023-06-19")
+        og_report = make_report({
+            "report": "khata_report",
+            "suppliers": json.dumps([{"id": test_supplier_id}]),
+            "parties": json.dumps([{"id": test_party_id}]),
+            "from": "2023-06-19",
+            "to": "2023-06-19"
+        })
 
         # Want to create a khata report here and check the output
         report = TestKhataReport("khata_report", [test_party_id], [
@@ -219,8 +240,13 @@ def run_basic_test():
             register_entry.supplier_id, register_entry.party_id, register_entry.bill_number)
 
         # Create third report
-        og_report = make_report("khata_report", [test_supplier_id], [
-                                test_party_id], "2023-06-19", "2023-06-19")
+        og_report = make_report({
+            "report": "khata_report",
+            "suppliers": json.dumps([{"id": test_supplier_id}]),
+            "parties": json.dumps([{"id": test_party_id}]),
+            "from": "2023-06-19",
+            "to": "2023-06-19"
+        })
 
         # Want to create a khata report here and check the output
         report = TestKhataReport("khata_report", [test_party_id], [
