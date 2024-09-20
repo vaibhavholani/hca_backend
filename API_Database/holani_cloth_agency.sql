@@ -1,47 +1,45 @@
 CREATE SEQUENCE supplier_seq;
 
--- supplier table
 CREATE TABLE supplier (
 	id INT DEFAULT NEXTVAL ('supplier_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
-	phone_number VARCHAR(20), -- Added column
+	phone_number VARCHAR(20),
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 );
 
--- party table
+
 CREATE SEQUENCE party_seq;
 
 CREATE TABLE party (
 	id INT DEFAULT NEXTVAL ('party_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
-	phone_number VARCHAR(20), -- Added column
+	phone_number VARCHAR(20),
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 );
 
--- bank table
 CREATE SEQUENCE bank_seq;
 
 CREATE TABLE bank (
 	id INT DEFAULT NEXTVAL ('bank_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
-	phone_number VARCHAR(20), -- Added column
+	phone_number VARCHAR(20),
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 );
 
--- Transport table
+
 CREATE SEQUENCE Transport_seq;
 
 CREATE TABLE Transport (
 	id INT DEFAULT NEXTVAL ('Transport_seq') PRIMARY KEY,
 	name VARCHAR(100),
 	address VARCHAR(300),
-	phone_number VARCHAR(20), -- Added column
+	phone_number VARCHAR(20),
 	UNIQUE (name),
 	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 );
@@ -97,12 +95,13 @@ CREATE SEQUENCE memo_bills_seq;
 
 CREATE TABLE memo_bills (
     id INT DEFAULT NEXTVAL ('memo_bills_seq') PRIMARY KEY,
-	memo_id INT, 
-	bill_number INT,
-	type VARCHAR(2),
-	amount INT,
-	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (memo_id) REFERENCES memo_entry(id)
+    memo_id INT, 
+    bill_id INT,
+    type VARCHAR(2),
+    amount INT,
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
+    FOREIGN KEY (bill_id) REFERENCES register_entry(id)
 );
 
 CREATE SEQUENCE part_payment_seq;
