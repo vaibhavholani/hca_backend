@@ -84,18 +84,23 @@ def insert_memo_bill(entry: MemoBill, memo_id: int) -> None:
     memo_bills_table = Table('memo_bills')
     insert_query = Query.into(memo_bills_table).columns(
         'memo_id',
-        'bill_number',
+        'bill_id',
         'type',
         'amount'
     ).insert(
         memo_id,
-        entry.bill_number,
+        entry.bill_id,
         entry.type,
         entry.amount
     )
 
     sql = insert_query.get_sql()
+    # Handle NULL bill_id
+    if entry.bill_id is None:
+        sql = sql.replace(f"{entry.bill_id}", "NULL")
     return execute_query(sql)
+
+
 
 
 def insert_memo_payment(payment: Dict) -> None:

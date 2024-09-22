@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Union, List
+from typing import Union, List, Optional
 from datetime import datetime, timedelta
 import datetime
 from typing import Dict
@@ -79,54 +79,55 @@ def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
     return int(response["result"][0]["id"])
 
 
-def get_memo_bill_id(memo_id: int, bill_number: int, type: str, amount: int) -> Dict:
-
+def get_memo_bill_id(memo_id: int, bill_id: Optional[int], type: str, amount: int) -> int:
     memo_bills = Table('memo_bills')
     query = Query.from_(memo_bills).select(
-        memo_bills.id).where((memo_bills.memo_id == memo_id) &
-                             (memo_bills.bill_number == bill_number) &
-                             (memo_bills.type == type) &
-                             (memo_bills.amount == amount))
+        memo_bills.id).where(
+            (memo_bills.memo_id == memo_id) &
+            (memo_bills.bill_id == bill_id) &
+            (memo_bills.type == type) &
+            (memo_bills.amount == amount)
+    )
     sql = query.get_sql()
+    # Handle NULL bill_id in the query
+    if bill_id is None:
+        sql = sql.replace(f"= {bill_id}", "IS NULL")
     response = execute_query(sql)
     if len(response["result"]) == 0:
-        raise (DataError(
-            f"No memo bill found with memo_id: {memo_id}, bill_number: {bill_number}, type: {type}, amount: {amount}"))
+        raise DataError(
+            f"No memo bill found with memo_id: {memo_id}, bill_id: {bill_id}, type: {type}, amount: {amount}")
     return response["result"][0]["id"]
 
 
+
 def get_memo_bills_by_id(memo_id: int) -> Dict:
+    memo_bills = Table('memo_bills')
+    query = Query.from_(memo_bills).select(
+        memo_bills.id,
+        memo_bills.bill_id,
+        memo_bills.type,
+        memo_bills.amount
+    ).where(memo_bills.memo_id == memo_id).orderby(memo_bills.bill_id)
+    sql = query.get_sql()
+    response = execute_query(sql)
+    return response["result"]
 
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
-
-    query = "select id, bill_number, type, amount from memo_bills where memo_id = '{}'".format(
-        memo_id)
-
-    cursor.execute(query)
-    data = cursor.fetchall()
-    db.close()
-    return data
 
 
 def get_memo_entry(memo_id: int) -> Dict:
-    """
-    Retrieve the dict required to create a memo entry object which has previously been inserted
-    """
     # Define tables
     memo_entry_table = Table('memo_entry')
     memo_payments_table = Table('memo_payments')
     memo_bills_table = Table('memo_bills')
-    part_payments_table = Table('part_payments')
     bank_table = Table('bank')
-    
+    register_entry_table = Table('register_entry')
+    part_payments_table = Table('part_payments')
+
     # Fetch basic memo data
     select_query = Query.from_(memo_entry_table).select("*").where(memo_entry_table.id == memo_id)
     memo_data = execute_query(select_query.get_sql())["result"][0]
-    
-    # Fetch associated payments
-    select_query = Query.from_(memo_payments_table).select("*").where(memo_payments_table.memo_id == memo_id)
 
+    # Fetch associated payments
     select_query = (
         Query.from_(memo_payments_table)
         .join(bank_table)
@@ -135,15 +136,32 @@ def get_memo_entry(memo_id: int) -> Dict:
         .where(memo_payments_table.memo_id == memo_id)
     )
     payments_data = execute_query(select_query.get_sql())["result"]
-    
-    # Construct payment data in desired format
-    payments = [{'bank_id': p["bank_id"],'bank_name': p["bank_name"], 'cheque_number': p["cheque_number"]} for p in payments_data]
-    
+
+    payments = [{'bank_id': p["bank_id"], 'bank_name': p["bank_name"], 'cheque_number': p["cheque_number"]} for p in payments_data]
+
     # Fetch associated bills
-    select_query = Query.from_(memo_bills_table).select("*").where(memo_bills_table.memo_id == memo_id).orderby(memo_bills_table.bill_number)
+    select_query = (
+        Query.from_(memo_bills_table)
+        .left_join(register_entry_table)
+        .on(memo_bills_table.bill_id == register_entry_table.id)
+        .select(
+            memo_bills_table.id,
+            memo_bills_table.bill_id,
+            register_entry_table.bill_number,
+            memo_bills_table.type,
+            memo_bills_table.amount
+        )
+        .where(memo_bills_table.memo_id == memo_id)
+        .orderby(register_entry_table.bill_number)
+    )
     bills_data = execute_query(select_query.get_sql())["result"]
-    
-   # Determine the mode based on bills_data
+
+    # Handle cases where bill_number is None
+    for bill in bills_data:
+        if bill['bill_number'] is None:
+            bill['bill_number'] = -1  # Or any placeholder value or message
+
+    # Determine the mode based on bills_data
     mode = "Full"  # default to Full
     for bill in bills_data:
         if bill["type"] == "PR":
@@ -176,6 +194,7 @@ def get_memo_entry(memo_id: int) -> Dict:
         result["selected_part"] = part_payments
     
     return result
+
 
 def get_all_memo_entries(**kwargs): 
     """

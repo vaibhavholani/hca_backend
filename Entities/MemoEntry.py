@@ -16,7 +16,6 @@ from API_Database import update_part_payment
 from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
 
-
 class MemoEntry(Entry):
 
     """
@@ -61,8 +60,7 @@ class MemoEntry(Entry):
                  deduction: int = 0,
                  table_name: str = "memo_entry",
                  *args,
-                 **kwargs
-                 ) -> None:
+                 **kwargs) -> None:
 
         super().__init__(table_name=table_name, *args, **kwargs)
 
@@ -73,43 +71,26 @@ class MemoEntry(Entry):
         self.register_date = sql_date(parse_date(register_date))
         self.gr_amount = gr_amount
         self.deduction = deduction
-
         self.mode = mode
-        self.selected_bills = \
-            RegisterEntry.retrieve(
-                self.supplier_id,
-                self.party_id,
-                selected_bills)
 
+        # selected_bills is now a list of register_entry IDs
+        self.selected_bills = RegisterEntry.retrieve_by_id_list(selected_bills)
         self.payment = payment
-
         self.part_payment = [int(memo_id) for memo_id in selected_part]
-
-        # Memo Bills
         self.memo_bills: List[MemoBill] = []
 
     def full_payment(self) -> None:
-        """
-        Used to complete full payment for bill(s)
-        """
-        # auto assign gr_amount and deduction
         self._auto_assign("gr_amount")
         self._auto_assign("deduction")
 
-        # set bills status to F
         for bill in self.selected_bills:
             bill.status = "F"
-            
             pending_amount = bill.get_pending_amount()
-            
-            # Add Memo Bills
             self.memo_bills.append(
-                MemoBill(bill.bill_number,
+                MemoBill(bill.get_id(),  # Use the register_entry ID
                          pending_amount,
                          "F")
             )
-
-            # update register entry data
             bill.update()
 
     def database_partial_payment(self):
@@ -119,7 +100,7 @@ class MemoEntry(Entry):
 
         # Add Memo bill
         self.memo_bills.append(
-            MemoBill(-1,
+            MemoBill(None,
                      self.amount,
                      "PR")
         )
@@ -260,13 +241,9 @@ class MemoEntry(Entry):
                           "gr_amount",
                           "deduction"]
 
-        # parse selected bills to only have "id"
         if "selected_bills" in data:
-            data["selected_bills"] = [int(bill["bill_number"]) for bill
-                                      in data["selected_bills"]]
-                                      
+            data["selected_bills"] = [int(bill["id"]) for bill in data["selected_bills"]]
 
-        # parse payments if required
         if "payment" in data:
             for payment_index in range(len(data["payment"])):
                 info = data["payment"][payment_index]
@@ -284,12 +261,11 @@ class MemoEntry(Entry):
         if parse_memo_bills:
             if "memo_bills" not in data:
                 raise DataError("Memo Bills not found in Data. MemoEntry from Dict Failed")
-            
-            memo_bills = data["memo_bills"]
 
+            memo_bills = data["memo_bills"]
             memo_entry.memo_bills = [MemoBill.from_dict(
                 memo_bill) for memo_bill in memo_bills]
-            
+
         return memo_entry
 
     @classmethod
