@@ -36,35 +36,34 @@ def _parse_response(response):
 
     try:
         # Ensure response is a valid JSON object
-        response = response.json()
-
-        print(response)
+        response_json = response.json()
+        print(response_json)
         # Check for the presence of 'choices' key
-        if 'choices' not in response or not response['choices']:
+        if 'choices' not in response_json or not response_json['choices']:
             raise ValueError("Response does not contain 'choices' or it's empty.")
 
         # Check for 'message' and 'content' in the first choice
-        if 'message' not in response['choices'][0] or 'content' not in response['choices'][0]['message']:
+        if 'message' not in response_json['choices'][0] or 'content' not in response_json['choices'][0]['message']:
             raise ValueError("Response does not contain 'message' or 'content'.")
 
-        json_response = response['choices'][0]['message']['content']
+        json_response = response_json['choices'][0]['message']['content']
 
         # Attempt to parse the JSON content
         if json_response:
             return json.loads(json_response)
-
         else:
             raise ValueError("The 'content' field is empty.")
 
     except json.JSONDecodeError as e:
         print(f"Failed to decode JSON: {e}")
-        return None
+        raise DataError({"status": "error", "message": f"Failed to decode JSON from OpenAI response"})
     except (KeyError, ValueError) as e:
         print(f"Error parsing response: {e}")
-        return None
+        raise DataError({"status": "error", "message": f"Error parsing OpenAI response"})
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return None
+        raise DataError({"status": "error", "message": f"An unexpected error occurred while parsing OpenAI response"})
+
     
 # Function to encode the image
 def encode_image(image_path):
@@ -112,8 +111,21 @@ def parse_register_entry(encoded_image):
     "max_tokens": 300
     }
 
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-    register_entry_data = _parse_response(response)
-    print(register_entry_data)
-    return register_entry_data
-    # return _parse_response(None)
+    try:
+        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
+        register_entry_data = _parse_response(response)
+        print(register_entry_data)
+        return register_entry_data
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        error_message = response.text  # Get error message from response
+        raise DataError({"status": "error", "message": f"HTTP error occurred while communicating with OpenAI API"})
+    except requests.exceptions.RequestException as e:
+        print(f"Request Error: {e}")
+        raise DataError({"status": "error", "message": f"Error occurred while communicating with OpenAI API"})
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise DataError({"status": "error", "message": f"An unexpected error occurred"})
+    
+    
