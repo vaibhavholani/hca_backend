@@ -14,33 +14,31 @@ dotenv.load_dotenv()
 def _parse_response(response):
     
     
-    sample_data ={
-                "supplier_name": "SAI TEX FAB",
-                "party_name": "SAMUNDER SAREE CENTRE (D.K)",
-                "date": "18/04/2023",
-                "bill_number": 107,
-                "amount": 69764
-                }
+    # sample_data ={
+    #             "supplier_name": "SAI TEX FAB",
+    #             "party_name": "SAMUNDER SAREE CENTER (D.K)",
+    #             "date": "2023-04-18",
+    #             "bill_number": 107,
+    #             "amount": 69764
+    #             }
     
-    sample_data_2 ={
-                "supplier_name": "SAI TEX FAB",
-                "party_name": None,
-                "date": "18/04/2023",
-                "bill_number": 107,
-                "amount": 69764
-                }
+    # sample_data_2 ={
+    #             "supplier_name": "SAI TEX FAB",
+    #             "party_name": None,
+    #             "date": "18/04/2023",
+    #             "bill_number": 107,
+    #             "amount": 69764
+    #             }
     
     
     
-    return sample_data
-
-
-
+    # return sample_data
 
     try:
         # Ensure response is a valid JSON object
         response = response.json()
 
+        print(response)
         # Check for the presence of 'choices' key
         if 'choices' not in response or not response['choices']:
             raise ValueError("Response does not contain 'choices' or it's empty.")
@@ -77,44 +75,45 @@ def encode_image(image_path):
 def parse_register_entry(encoded_image):
     # Prompt 
     prompt = "Extract the sender/receiver name, total amount, date, and bill number (invoice number) from the invoice image and return them in the following JSON format: \
-            {\"supplier_name\": \"string\", \"party_name\": \"string\", \"date\": \"DD/MM/YYYY\", \"bill_number\": \"integer or string\", \"amount\": \"integer\"}."
+            {\"supplier_name\": \"string\", \"party_name\": \"string\", \"date\": \"yyyy-MM-dd\", \"bill_number\": \"integer or string\", \"amount\": \"integer\"}."
 
     # Getting the base64 string
     base64_image = encoded_image
     
   
     # OpenAI API Key
-    # api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
 
-    # headers = {
-    # "Content-Type": "application/json",
-    # "Authorization": f"Bearer {api_key}"
-    # }
+    headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {api_key}"
+    }
 
-    # payload = {
-    # "model": "gpt-4o-mini",
-    # "response_format": { "type": "json_object" },
-    # "messages": [
-    #     {
-    #     "role": "user",
-    #     "content": [
-    #         {
-    #         "type": "text",
-    #         "text": prompt
-    #         },
-    #         {
-    #         "type": "image_url",
-    #         "image_url": {
-    #             "url": f"data:image/jpeg;base64,{base64_image}"
-    #         }
-    #         }
-    #     ]
-    #     }
-    # ],
-    # "max_tokens": 300
-    # }
+    payload = {
+    "model": "gpt-4o-mini",
+    "response_format": { "type": "json_object" },
+    "messages": [
+        {
+        "role": "user",
+        "content": [
+            {
+            "type": "text",
+            "text": prompt
+            },
+            {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64_image}"
+            }
+            }
+        ]
+        }
+    ],
+    "max_tokens": 300
+    }
 
-    # response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-    # register_entry_data = _parse_response(response)
-
-    return _parse_response(None)
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    register_entry_data = _parse_response(response)
+    print(register_entry_data)
+    return register_entry_data
+    # return _parse_response(None)

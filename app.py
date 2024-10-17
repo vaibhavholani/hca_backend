@@ -7,6 +7,7 @@ import ast
 from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import JWTManager
+import base64
 
 
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
@@ -21,6 +22,7 @@ from Individual import Supplier, Party, Bank, Transporter
 from Reports import report_select, CustomEncoder
 from Legacy_Data import add_party, add_suppliers
 from Exceptions import DataError
+from OCR import parse_register_entry
 from utils import table_class_mapper
 
 # load env file
@@ -225,6 +227,24 @@ def backup_data():
 
     return backup.backup_postgresql_database(user, dbname, password, backup_file_path)
 
+@app.route(BASE + '/parse_register_entry', methods=['POST'])
+def parse_register_entry_route():
+    if 'image' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No image provided'}), 400
+    image = request.files['image']
+
+    print(request.files)
+    # Read image file in binary mode
+    image_bytes = image.read()
+    encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+
+    # Call parse_register_entry with the image bytes
+    parsed_data = parse_register_entry(encoded_image)
+
+    if parsed_data is None:
+        return jsonify({'status': 'error', 'message': 'Failed to parse image'}), 500
+
+    return jsonify(parsed_data)
 
 @app.route(BASE + '/fix_problems')
 def fix():
