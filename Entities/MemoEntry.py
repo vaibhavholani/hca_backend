@@ -140,7 +140,7 @@ class MemoEntry(Entry):
                     setattr(bill, attr_name, bill_new_amount)
 
                     # create memo bill
-                    memo_bill = MemoBill(bill.bill_number,
+                    memo_bill = MemoBill(bill.get_id(),
                                          used_amount,
                                          attr_name[0].upper())
                     # create a memo bill
@@ -273,6 +273,7 @@ class MemoEntry(Entry):
         """
         Adds a memo to the database
         """
+
         #  Check for valid memo number
         if not cls.check_new(**data):
             return {

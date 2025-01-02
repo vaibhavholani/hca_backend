@@ -74,9 +74,7 @@ def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, reg
     Returns primary key id of the register entry
     """
 
-    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'" \
-            "order by " \
-            "register_date DESC". \
+    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'" .\
         format(bill_number, supplier_id, party_id, register_date)
     
     result = db_connector.execute_query(query, False)

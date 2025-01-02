@@ -81,22 +81,30 @@ def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
 
 def get_memo_bill_id(memo_id: int, bill_id: Optional[int], type: str, amount: int) -> int:
     memo_bills = Table('memo_bills')
-    query = Query.from_(memo_bills).select(
-        memo_bills.id).where(
-            (memo_bills.memo_id == memo_id) &
-            (memo_bills.bill_id == bill_id) &
-            (memo_bills.type == type) &
-            (memo_bills.amount == amount)
+    
+    # Start building the query
+    query = Query.from_(memo_bills).select(memo_bills.id).where(
+        (memo_bills.memo_id == memo_id) &
+        (memo_bills.type == type) &
+        (memo_bills.amount == amount)
     )
+    
+    # Conditionally add bill_id to the query if it's not None
+    if bill_id is not None:
+        query = query.where(memo_bills.bill_id == bill_id)
+
     sql = query.get_sql()
-    # Handle NULL bill_id in the query
-    if bill_id is None:
-        sql = sql.replace(f"= {bill_id}", "IS NULL")
+    
     response = execute_query(sql)
+    
+    # Handle no results
     if len(response["result"]) == 0:
         raise DataError(
-            f"No memo bill found with memo_id: {memo_id}, bill_id: {bill_id}, type: {type}, amount: {amount}")
+            f"No memo bill found with memo_id: {memo_id}, bill_id: {bill_id}, type: {type}, amount: {amount}"
+        )
+    
     return response["result"][0]["id"]
+
 
 
 
