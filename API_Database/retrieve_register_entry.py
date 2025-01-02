@@ -285,7 +285,7 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     for bill in bills_data:
         del bill["bill_id"]  # Remove bill_id from output data
         # For now, we'll append the bill data with dummy memo data
-        data.append({**dummy_memo, **bills})
+        data.append({**dummy_memo, **bill})
 
     return data
 
