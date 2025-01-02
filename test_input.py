@@ -53,11 +53,11 @@ def run_basic_test():
             # create cleanup list
             cleanup_list = []
 
-            test_supplier_input = {"name": "test_supplier1",
+            test_supplier_input = {"name": "test_suppli422334",
                                    "address": "test_address", 
                                    "phone_number": "9350544808"}
 
-            test_party_input = {"name": "test_party1",
+            test_party_input = {"name": "test_pa34r4343",
                                 "address": "test_address", 
                                 "phone_number": "+1 647 901 4404"}
 
@@ -188,7 +188,7 @@ def run_basic_test():
             # Create a part memo for half that amount
 
 
-            memo_number1 = 1122
+            memo_number1 = 5517766
             # Create a Memo Entry
             part_input = {'memo_number': memo_number1,
                           'register_date': '2023-08-04',
@@ -232,7 +232,8 @@ def run_basic_test():
 
             amount = total_pending_amount - part - deduction - gr_amount
 
-            full_input = {'memo_number': 3970,
+            memo_number2 = 394470334
+            full_input = {'memo_number': memo_number2,
                           'register_date': '2023-08-04',
                           'amount': amount,
                           'gr_amount': gr_amount,
@@ -251,7 +252,7 @@ def run_basic_test():
             cleanup_list.append(full_memo)
 
             # retrieve the memo entry
-            full_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, 3970)
+            full_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, memo_number2)
 
             # Get Updated Register Entry
             # TODO: Here I should be manually setting the status. Do I need to set other stuff, yes.
@@ -276,6 +277,8 @@ def run_basic_test():
             report_data = report.generate_table([register_entry], [full_memo])
 
             assert og_report == report_data
+
+            print("All Tests Passed")
 
             # cleanup
             cleanup(cleanup_list)
