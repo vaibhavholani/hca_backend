@@ -44,6 +44,29 @@ def get_all_register_entries(**kwargs):
     response = execute_query(sql)
     return response["result"]
 
+def get_register_entry_by_id(id: int) -> Dict:
+    register_entry_table = Table('register_entry')
+    select_query = Query.from_(register_entry_table).select(
+        register_entry_table.supplier_id,
+        register_entry_table.party_id,
+        register_entry_table.bill_number,
+        fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_("register_date"),
+        fn.Cast(register_entry_table.amount, "integer").as_("amount"),
+        register_entry_table.partial_amount,
+        register_entry_table.status,
+        register_entry_table.deduction,
+        register_entry_table.gr_amount
+    ).where(
+        (register_entry_table.id == id)
+    )
+    sql = select_query.get_sql()
+    data = execute_query(sql)
+    if len(data["result"]) == 0:
+        raise DataError(f"No Register Entry with id: {id}")
+    if len(data["result"]) != 1:
+        raise DataError(f"Multiple Register Entries with same id: {id}")
+    return data["result"][0]
+
     
 
 def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, register_date: str) -> int:
@@ -51,9 +74,7 @@ def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, reg
     Returns primary key id of the register entry
     """
 
-    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'" \
-            "order by " \
-            "register_date DESC". \
+    query = "select id from register_entry where bill_number = '{}' AND supplier_id = '{}' AND party_id = '{}' AND register_date = '{}'" .\
         format(bill_number, supplier_id, party_id, register_date)
     
     result = db_connector.execute_query(query, False)
@@ -61,7 +82,7 @@ def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, reg
     
     return data[0][0]
 
-
+# @deprecated
 def check_unique_bill_number(supplier_id: int, party_id: int, bill_number: int, date: str) -> bool:
     """
     Check if the bill number if unique
@@ -147,35 +168,49 @@ def _pop_dict_keys(pop_dict: dict, keys: List[str]) -> dict:
         pop_dict.pop(key, None)
     return pop_dict
 
-def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Tuple]:
+def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
     """
     Returns a list of all bill_number's amount and date between the given dates
     """
 
     data = []
 
-    query = "select register_entry.bill_number as bill_no, to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date, " \
-            "register_entry.amount::integer as bill_amt, register_entry.status as bill_status " \
-            "from register_entry " \
-            "where party_id = '{}' AND supplier_id = '{}' AND " \
-            "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;"\
-        .format(party_id, supplier_id, start_date, end_date)
-
+    # Updated query to include register_entry.id as bill_id
+    query = """
+        SELECT 
+            register_entry.bill_number as bill_no,
+            to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date,
+            register_entry.amount::integer as bill_amt,
+            register_entry.status as bill_status,
+            register_entry.id as bill_id
+        FROM register_entry
+        WHERE party_id = '{}' AND supplier_id = '{}' AND register_date >= '{}' AND register_date <= '{}'
+        ORDER BY register_entry.register_date, register_entry.bill_number;
+    """.format(party_id, supplier_id, start_date, end_date)
     result = execute_query(query)
     bills_data = result["result"]
 
     if len(bills_data) == 0:
         return bills_data
-   
+
     # dummy memo_bill_retrieval
     dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "chk_amt": "", "memo_type": ""}
+
     for bills in bills_data:
-        query_2 = "select memo_entry.memo_number as memo_no, memo_bills.amount as memo_amt, to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date, " \
-                  "memo_entry.amount as chk_amt, memo_bills.type as memo_type " \
-                  "from memo_entry JOIN memo_bills on (memo_entry.id = memo_bills.memo_id) " \
-                  "where memo_bills.bill_number = '{}' AND memo_entry.supplier_id = '{}' " \
-                  "AND memo_entry.party_id = '{}'; " \
-            .format(bills["bill_no"], supplier_id, party_id)
+        bill_id = bills.pop("bill_id")  # Remove bill_id from the bill data
+        
+        # Use bill_id instead of bill_number
+        query_2 = """
+            SELECT 
+                memo_entry.memo_number as memo_no,
+                memo_bills.amount as memo_amt,
+                to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date,
+                memo_entry.amount as chk_amt,
+                memo_bills.type as memo_type
+            FROM memo_entry
+            JOIN memo_bills ON (memo_entry.id = memo_bills.memo_id)
+            WHERE memo_bills.bill_id = '{}' AND memo_entry.supplier_id = '{}' AND memo_entry.party_id = '{}';
+        """.format(bill_id, supplier_id, party_id)
         result = execute_query(query_2)
         memo_data = result["result"]
 
@@ -184,10 +219,7 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
                 if nums == 0:
                     data_dict = {**bills, **memo_data[nums]}
                 else:
-                    # temp_dict = dict(memo_data[nums])
-                    # temp_dict = _pop_dict_keys(temp_dict, ["chk_amt"])
-                    data_dict = memo_data[nums]
-
+                    data_dict = {**memo_data[nums]}
                 data.append(data_dict)
         else:
             data.append({**bills, **dummy_memo})
@@ -220,33 +252,41 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     return data
 
 
-def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Tuple]:
+def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
     """
-    Get all the pending bills info
+    Get all pending bills info between supplier and party, without including bill_id in the output.
     """
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
 
-    query = "select bill_number as bill_no, amount::integer as bill_amt, " \
-            "to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
-            "(amount - (partial_amount)-gr_amount - deduction) as pending_amt," \
-            "DATE_PART('day', NOW() - register_date)::integer as days, " \
-            "status from " \
-            "register_entry JOIN supplier ON supplier.id = register_entry.supplier_id " \
-            "where supplier_id = '{}' AND party_id = '{}' AND " \
-            "register_date >= '{}' AND register_date <= '{}' AND status != 'F'". \
-        format(supplier_id, party_id, start_date, end_date)
+    # Initial query to fetch pending bills, including bill_id internally
+    query = """
+        SELECT 
+            register_entry.bill_number AS bill_no,
+            CAST(register_entry.amount AS INTEGER) AS bill_amt,
+            TO_CHAR(register_entry.register_date, 'DD/MM/YYYY') AS bill_date,
+            (register_entry.amount - register_entry.partial_amount - register_entry.gr_amount - register_entry.deduction) AS pending_amt,
+            DATE_PART('day', NOW() - register_entry.register_date)::INTEGER AS days,
+            register_entry.status,
+            register_entry.id AS bill_id  
+        FROM register_entry
+        WHERE supplier_id = '{}' AND party_id = '{}' AND register_date >= '{}' AND register_date <= '{}'
+          AND status != 'F';
+    """.format(supplier_id, party_id, start_date, end_date)
 
-    # add dummy data
-    
-    cursor.execute(query)
-    temp_data = cursor.fetchall()
-    # dummy memo_bill_retrieval
+    result = execute_query(query)
+    bills_data = result["result"]
+
+    if not bills_data:
+        return bills_data
+
+    # Dummy memo data
     dummy_memo = {"part_no": "", "part_date": "", "part_amt": ""}
+
     data = []
-    for bills in temp_data:
-        data.append({**dummy_memo, **bills})
-    db.close()
+    for bill in bills_data:
+        del bill["bill_id"]  # Remove bill_id from output data
+        # For now, we'll append the bill data with dummy memo data
+        data.append({**dummy_memo, **bill})
+
     return data
 
 

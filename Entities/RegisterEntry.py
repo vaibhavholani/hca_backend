@@ -8,7 +8,7 @@ the bill for an order is received.
 from __future__ import annotations
 from datetime import datetime
 from typing import List, Dict, Union
-from API_Database import insert_register_entry, update_register_entry, utils
+from API_Database import insert_register_entry, update_register_entry, utils, get_register_entry_by_id
 from API_Database import get_register_entry_id, get_register_entry
 from API_Database import get_pending_bills, mark_order_forms_as_registered
 from Exceptions import DataError
@@ -139,6 +139,18 @@ class RegisterEntry(Entry):
         # if just one bill
         bill_data = get_register_entry(supplier_id, party_id, bill_number)
         return cls.from_dict(bill_data)
+    
+    @classmethod
+    def retrieve_by_id(cls, id: int) -> RegisterEntry:
+        data = get_register_entry_by_id(id)
+        return cls.from_dict(data)
+
+    @classmethod
+    def retrieve_by_id_list(cls, ids: List[int]) -> List[RegisterEntry]:
+        register_entries = []
+        for id in ids:
+            register_entries.append(cls.retrieve_by_id(id))
+        return register_entries
 
     @classmethod
     def insert(cls, data: Dict, get_cls: bool=False) -> Dict:

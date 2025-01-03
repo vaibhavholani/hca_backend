@@ -67,7 +67,7 @@ class TestKhataTable(KhataReport):
             first = True
             for memo_entry in memo_entries:
                 for bill in memo_entry.memo_bills:
-                    if bill.bill_number == register_entry.bill_number:
+                    if bill.bill_id == register_entry.get_id():
                         add_dummy = False
                         memo_dict = {
                             "memo_no": memo_entry.memo_number,
