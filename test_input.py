@@ -53,11 +53,11 @@ def run_basic_test():
             # create cleanup list
             cleanup_list = []
 
-            test_supplier_input = {"name": "test_suppli422334",
+            test_supplier_input = {"name": "test_suppli42334",
                                    "address": "test_address", 
                                    "phone_number": "9350544808"}
 
-            test_party_input = {"name": "test_pa34r4343",
+            test_party_input = {"name": "test_pa3r4343",
                                 "address": "test_address", 
                                 "phone_number": "+1 647 901 4404"}
 
@@ -144,7 +144,7 @@ def run_basic_test():
 
             # retrieve the register entry
             register_entry = RegisterEntry.retrieve(
-                test_supplier_id, test_party_id, "123456")
+                test_supplier_id, test_party_id, "123456", "2023-06-19")
             
             register_entry_id = register_entry.get_id()
             
@@ -260,7 +260,7 @@ def run_basic_test():
             # But then if I have multiple register_entries, I would have to auto divide, well that helps you make sure the auto divide is working correctly
             # and I am going to write tests with at max 3 register_entries
             register_entry = RegisterEntry.retrieve(
-                register_entry.supplier_id, register_entry.party_id, register_entry.bill_number)
+                register_entry.supplier_id, register_entry.party_id, register_entry.bill_number, register_entry.register_date)
 
             # Create third report
             og_report = make_report({

@@ -127,17 +127,37 @@ class RegisterEntry(Entry):
     @classmethod
     def retrieve(cls, supplier_id: int, 
                  party_id: int, 
-                 bill_number: Union[List[int], int]) -> Union[RegisterEntry, List[RegisterEntry]]:
+                 bill_number: Union[List[Dict], int, str],
+                 register_date: Union[str, datetime] = None) -> Union[RegisterEntry, List[RegisterEntry]]:
+        """
+        Retrieve register entries.
+        
+        For single bill:
+            bill_number: int or str - the bill number
+            register_date: str or datetime - the register date (required)
+            
+        For multiple bills:
+            bill_number: List[Dict] where each dict has:
+                - 'bill_number': int or str
+                - 'register_date': str or datetime
+            register_date: ignored for multiple bills
+        """
         
         # if multiple bills
         if isinstance(bill_number, list):
             bills_data = []
-            for bill in bill_number:
-                bills_data.append(get_register_entry(supplier_id, party_id, bill))
+            for bill_info in bill_number:
+                bill_num = bill_info['bill_number']
+                bill_date = utils.sql_date(utils.parse_date(bill_info['register_date']))
+                bills_data.append(get_register_entry(supplier_id, party_id, bill_num, bill_date))
             return [cls.from_dict(d) for d in bills_data]
         
         # if just one bill
-        bill_data = get_register_entry(supplier_id, party_id, bill_number)
+        if not register_date:
+            raise ValueError("register_date is required for single bill retrieval")
+            
+        register_date = utils.sql_date(utils.parse_date(register_date))
+        bill_data = get_register_entry(supplier_id, party_id, bill_number, register_date)
         return cls.from_dict(bill_data)
     
     @classmethod

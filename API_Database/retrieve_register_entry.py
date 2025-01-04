@@ -79,6 +79,11 @@ def get_register_entry_id(supplier_id: int, party_id: int, bill_number: int, reg
     
     result = db_connector.execute_query(query, False)
     data = result["result"]
+
+    if len(data) == 0:
+        raise DataError(f"No Register Entry with supplier_id: {supplier_id}, party_id: {party_id}, bill_number: {bill_number}, register_date: {register_date}")
+    if len(data) != 1:
+        raise DataError(f"Multiple Register Entries with same supplier_id: {supplier_id}, party_id: {party_id}, bill_number: {bill_number}, register_date: {register_date}")
     
     return data[0][0]
 
@@ -119,7 +124,7 @@ def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
     return result
 
 
-def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> Dict:
+def get_register_entry(supplier_id: int, party_id: int, bill_number: int, register_date: datetime) -> Dict:
     """
     Return the register entry associated with the given bill number.
     """
@@ -140,7 +145,8 @@ def get_register_entry(supplier_id: int, party_id: int, bill_number: int) -> Dic
     ).where(
         (register_entry_table.bill_number == bill_number) &
         (register_entry_table.supplier_id == supplier_id) &
-        (register_entry_table.party_id == party_id)
+        (register_entry_table.party_id == party_id) &
+        (register_entry_table.register_date == register_date)
     )
 
     # Get the raw SQL query from the Pypika query
