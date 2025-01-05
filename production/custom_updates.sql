@@ -1,3 +1,22 @@
+WITH duplicate_bills_to_delete AS (
+    SELECT re.id
+    FROM register_entry re
+    JOIN (
+        SELECT supplier_id, party_id, bill_number
+        FROM register_entry
+        GROUP BY supplier_id, party_id, bill_number
+        HAVING COUNT(*) > 1
+    ) duplicate_combinations
+    ON re.supplier_id = duplicate_combinations.supplier_id
+       AND re.party_id = duplicate_combinations.party_id
+       AND re.bill_number = duplicate_combinations.bill_number
+    WHERE re.status = 'N'
+)
+DELETE FROM register_entry
+WHERE id IN (SELECT id FROM duplicate_bills_to_delete);
+
+
+
 -- Add a new column to memo_bills
 ALTER TABLE memo_bills
 ADD COLUMN bill_id INT;
@@ -37,7 +56,7 @@ WITH earliest_register_entries AS (
     ORDER BY re.supplier_id, re.party_id, re.bill_number, re.register_date
 )
 UPDATE memo_bills mb
-SET bill_id = e.register_id
+SET mb.bill_id = e.register_id
 FROM earliest_register_entries e
 WHERE mb.id = e.memo_bill_id;
 
