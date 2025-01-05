@@ -117,8 +117,22 @@ def get_pending_bills(supplier_id: int, party_id: int) -> List[Dict]:
     Returns a list of all pending bill numbers between party and supplier.
     """
 
-    query = "select id, bill_number, status, CAST(floor(partial_amount) AS INTEGER) as partial_amount, CAST(floor(amount) AS INTEGER) as amount, gr_amount, deduction from register_entry where supplier_id = '{}' AND party_id = '{}' AND status != '{}'".\
-        format(supplier_id, party_id, "F")
+    query = """
+        SELECT 
+            id, 
+            bill_number, 
+            status, 
+            CAST(floor(partial_amount) AS INTEGER) as partial_amount, 
+            CAST(floor(amount) AS INTEGER) as amount, 
+            gr_amount, 
+            deduction,
+            to_char(register_date, 'DD/MM/YY') as register_date
+        FROM register_entry 
+        WHERE supplier_id = '{}' 
+        AND party_id = '{}' 
+        AND status != '{}'
+        ORDER BY register_date DESC
+    """.format(supplier_id, party_id, "F")
     response = execute_query(query)
     result = response["result"]
     return result
