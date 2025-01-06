@@ -243,85 +243,83 @@ def get_all_memo_entries(**kwargs):
     
     return memo_entries_json
 
-def get_total_memo_entity(supplier_id: int,
-                          party_id: int,
-                          start_date: datetime.datetime,
-                          end_date: datetime.datetime,
-                          memo_type: str):
-
+def get_total_memo_entity_bulk(supplier_ids: List[int],
+                              party_ids: List[int],
+                              start_date: datetime.datetime,
+                              end_date: datetime.datetime,
+                              memo_type: str,
+                              supplier_all: bool = False,
+                              party_all: bool = False):
+    """
+    Get total memo amount for multiple suppliers and parties in one query.
+    Optimized version that fetches data in bulk when all suppliers/parties are selected.
+    """
     # Handle the case if memo_type is "PR"
     if memo_type == "PR":
-        result = get_partial_payment(supplier_id, party_id)
-        total_amount = 0
-        for row in result:
-            total_amount += row["memo_amt"]
-        return total_amount
+        from API_Database.retrieve_partial_payment import get_partial_payment_bulk
+        result = get_partial_payment_bulk(supplier_ids, party_ids, supplier_all, party_all)
+        return sum(row["memo_amt"] for row in result)
 
-    memo_entry = Table('memo_entry')
-    memo_bills = Table('memo_bills')
+    # Build WHERE clause based on all flags
+    where_clauses = []
 
-    # Creating the base query
-    query = Query.from_(memo_bills).select(
-        fn.Sum(memo_bills.amount).as_('total_amount'))
+    # Add supplier filter only if not all suppliers
+    if not supplier_all and supplier_ids:
+        supplier_ids_str = ','.join(map(str, supplier_ids))
+        where_clauses.append(f"memo_entry.supplier_id IN ({supplier_ids_str})")
 
-    # Joining memo_bills with memo_entry to filter the bills based on supplier_id, party_id, and type
-    query = query.join(memo_entry).on(memo_bills.memo_id == memo_entry.id)
+    # Add party filter only if not all parties
+    if not party_all and party_ids:
+        party_ids_str = ','.join(map(str, party_ids))
+        where_clauses.append(f"memo_entry.party_id IN ({party_ids_str})")
 
-    # Adding the WHERE conditions
-    query = query.where(memo_entry.supplier_id == supplier_id)
-    query = query.where(memo_entry.party_id == party_id)
-    query = query.where(memo_bills.type == memo_type)
-    query = query.where(memo_entry.register_date.between(start_date, end_date))
+    # Always add type and date range filters
+    where_clauses.extend([
+        f"memo_bills.type = '{memo_type}'",
+        f"memo_entry.register_date >= '{start_date}'",
+        f"memo_entry.register_date <= '{end_date}'"
+    ])
 
-    # Executing the query
-    db, cursor = db_connector.cursor(True)
-    cursor.execute(query.get_sql())
-    result = cursor.fetchall()
+    where_clause = " AND ".join(where_clauses)
 
-    # If the sum is None, return 0 else return integer value of sum
-    total_amount = result[0]["total_amount"]
-    result = 0 if total_amount is None else int(total_amount)
+    query = """
+        SELECT COALESCE(SUM(memo_bills.amount), 0) as total_amount
+        FROM memo_bills
+        JOIN memo_entry ON memo_bills.memo_id = memo_entry.id
+        WHERE {}
+    """.format(where_clause)
 
-    # Closing the connection
-    db.close()
-    return result
-
+    result = execute_query(query)
+    return int(result["result"][0]["total_amount"])
 
 def generate_memo_total(supplier_ids: Union[int, List[int]],
-                        party_ids: Union[int, List[int]],
-                        start_date: datetime,
-                        end_date: datetime,
-                        memo_type: str):
+                       party_ids: Union[int, List[int]],
+                       start_date: datetime,
+                       end_date: datetime,
+                       memo_type: str,
+                       supplier_all: bool = False,
+                       party_all: bool = False):
     """
-    Generates the total for the given supplier_ids and party_ids for memo_bills
-
-    Parameters:
-    supplier_ids (Union[int, List[int]]): Supplier IDs to consider for total calculation
-    party_ids (Union[int, List[int]]): Party IDs to consider for total calculation
-    start_date (datetime): Start date for filtering memo_bills based on register_date
-    end_date (datetime): End date for filtering memo_bills based on register_date
-    memo_type (str): Type of memo_bills to consider for total calculation
-
-    Returns:
-    int: The calculated total for memo_bills based on the provided parameters
+    Generates the total for the given supplier_ids and party_ids for memo_bills.
+    Uses bulk query for better performance.
     """
-
-    # Handling single supplier_id and party_id
+    # Convert single IDs to lists
     if isinstance(supplier_ids, int):
         supplier_ids = [supplier_ids]
     if isinstance(party_ids, int):
         party_ids = [party_ids]
 
-    # Handling date
+    # Handle date formats
     if isinstance(start_date, str):
         start_date = parse_date(start_date)
     if isinstance(end_date, str):
         end_date = parse_date(end_date)
 
-    # Use calculate_memo_totals function and find the total for each supplier_id, party_id, and memo_type
-    total = 0
-    for supplier_id in supplier_ids:
-        for party_id in party_ids:
-            total += get_total_memo_entity(supplier_id,
-                                           party_id, start_date, end_date, memo_type)
-    return total
+    # Use bulk query to get total
+    return get_total_memo_entity_bulk(
+        supplier_ids, party_ids, 
+        start_date, end_date, 
+        memo_type,
+        supplier_all=supplier_all,
+        party_all=party_all
+    )

@@ -2,24 +2,36 @@ from typing import Dict
 import json
 from Reports import report
 from Reports import payment_list_summary, grand_total_report, legacy_payment_list
-from API_Database import efficiency
+from API_Database import efficiency, retrieve_indivijual
 import sys
 sys.path.append("../")
 
 
 def make_report(data: Dict) -> Dict:
-    # Extract basic report parameters
-    supplier_ids = [element["id"] for element in json.loads(data["suppliers"])]
-    party_ids = [element["id"] for element in json.loads(data["parties"])]
+    # Extract all selection flags first
+    supplier_all = data.get('supplierAll', False)
+    party_all = data.get('partyAll', False)
+
+    # Get all IDs if respective all flags are set
+    if supplier_all:
+        supplier_data = retrieve_indivijual.get_all_names_ids('supplier')
+        supplier_ids = [s['id'] for s in supplier_data]
+    else:
+        supplier_ids = [element["id"]
+                        for element in json.loads(data["suppliers"])]
+
+    if party_all:
+        party_data = retrieve_indivijual.get_all_names_ids('party')
+        party_ids = [p['id'] for p in party_data]
+    else:
+        party_ids = [element["id"] for element in json.loads(data["parties"])]
+
+    # Extract remaining parameters
     select = data['report']
     start_date = data['from']
     end_date = data['to']
 
-    # Extract all selection flags
-    supplier_all = data.get('supplierAll', False)
-    party_all = data.get('partyAll', False)
-
-    # if supplier_ids or party_ids are ints, convert them to lists
+    # Ensure IDs are lists
     if isinstance(supplier_ids, int):
         supplier_ids = [supplier_ids]
     if isinstance(party_ids, int):
