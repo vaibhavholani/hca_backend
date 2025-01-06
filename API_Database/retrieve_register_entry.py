@@ -164,7 +164,7 @@ def get_register_entry(supplier_id: int, party_id: int, bill_number: int, regist
     )
 
     # Get the raw SQL query from the Pypika query
-    sql= select_query.get_sql()
+    sql = select_query.get_sql()
 
     # Execute the query and fetch data from the database
     data = execute_query(sql)
@@ -188,15 +188,38 @@ def _pop_dict_keys(pop_dict: dict, keys: List[str]) -> dict:
         pop_dict.pop(key, None)
     return pop_dict
 
-def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
+
+def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str, supplier_all: bool = False, party_all: bool = False) -> List[Dict]:
     """
     Returns a list of all bill_number's amount and date between the given dates for multiple suppliers and parties.
     Optimized version that fetches data in bulk when all suppliers/parties are selected.
     """
-    # Convert lists to strings for SQL IN clause
-    supplier_ids_str = ','.join(map(str, supplier_ids))
-    party_ids_str = ','.join(map(str, party_ids))
-    
+    # Build WHERE clause based on all flags
+    bills_where_clauses = []
+    memo_where_clauses = []
+
+    if not supplier_all:
+        supplier_ids_str = ','.join(map(str, supplier_ids))
+        bills_where_clauses.append(
+            f"register_entry.supplier_id IN ({supplier_ids_str})")
+        memo_where_clauses.append(
+            f"memo_entry.supplier_id IN ({supplier_ids_str})")
+
+    if not party_all:
+        party_ids_str = ','.join(map(str, party_ids))
+        bills_where_clauses.append(
+            f"register_entry.party_id IN ({party_ids_str})")
+        memo_where_clauses.append(f"memo_entry.party_id IN ({party_ids_str})")
+
+    bills_where_clauses.extend([
+        f"register_date >= '{start_date}'",
+        f"register_date <= '{end_date}'"
+    ])
+
+    bills_where_clause = " AND ".join(bills_where_clauses)
+    memo_where_clause = " AND ".join(
+        memo_where_clauses) if memo_where_clauses else "TRUE"
+
     # Use CTE for better query organization
     query = """
         WITH bills_data AS (
@@ -209,10 +232,7 @@ def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], s
                 register_entry.supplier_id,
                 register_entry.party_id
             FROM register_entry
-            WHERE register_entry.supplier_id IN ({}) 
-            AND register_entry.party_id IN ({})
-            AND register_date >= '{}' 
-            AND register_date <= '{}'
+            WHERE {}
             ORDER BY register_entry.register_date, register_entry.bill_number
         ),
         memo_data AS (
@@ -227,8 +247,7 @@ def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], s
                 memo_entry.party_id
             FROM memo_entry
             JOIN memo_bills ON memo_entry.id = memo_bills.memo_id
-            WHERE memo_entry.supplier_id IN ({})
-            AND memo_entry.party_id IN ({})
+            WHERE {}
         )
         SELECT 
             b.*,
@@ -242,7 +261,7 @@ def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], s
         AND b.supplier_id = m.supplier_id 
         AND b.party_id = m.party_id
         ORDER BY b.bill_date, b.bill_no;
-    """.format(supplier_ids_str, party_ids_str, start_date, end_date, supplier_ids_str, party_ids_str)
+    """.format(bills_where_clause, memo_where_clause)
 
     result = execute_query(query)
     bills_data = result["result"]
@@ -279,7 +298,8 @@ def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], s
 
     return data
 
-def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+
+def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str, **kwargs) -> List[Dict]:
     """
     Returns a list of all bill_number's amount and date between the given dates.
     Single supplier-party version that calls the bulk version for consistency.
@@ -287,15 +307,29 @@ def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end
     return get_khata_data_by_date_bulk([supplier_id], [party_id], start_date, end_date)
 
 
-def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
+def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str, supplier_all: bool = False, party_all: bool = False) -> List[Dict]:
     """
     Returns a list of all bill_number's amount and date for multiple suppliers and parties.
     Optimized version that fetches data in bulk when all suppliers/parties are selected.
     """
-    # Convert lists to strings for SQL IN clause
-    supplier_ids_str = ','.join(map(str, supplier_ids))
-    party_ids_str = ','.join(map(str, party_ids))
-    
+    # Build WHERE clause based on all flags
+    where_clauses = []
+
+    if not supplier_all:
+        supplier_ids_str = ','.join(map(str, supplier_ids))
+        where_clauses.append(f"supplier_id IN ({supplier_ids_str})")
+
+    if not party_all:
+        party_ids_str = ','.join(map(str, party_ids))
+        where_clauses.append(f"party_id IN ({party_ids_str})")
+
+    where_clauses.extend([
+        f"register_date >= '{start_date}'",
+        f"register_date <= '{end_date}'"
+    ])
+
+    where_clause = " AND ".join(where_clauses)
+
     query = """
         SELECT 
             to_char(register_date, 'DD/MM/YYYY') as bill_date,
@@ -312,12 +346,9 @@ def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int
         FROM register_entry 
         JOIN party ON party.id = register_entry.party_id
         JOIN supplier ON supplier.id = register_entry.supplier_id
-        WHERE supplier_id IN ({}) 
-        AND party_id IN ({})
-        AND register_date >= '{}'
-        AND register_date <= '{}'
+        WHERE {}
         ORDER BY supplier_name, party_name, register_date, bill_number;
-    """.format(supplier_ids_str, party_ids_str, start_date, end_date)
+    """.format(where_clause)
 
     result = execute_query(query)
     data = result["result"]
@@ -326,10 +357,11 @@ def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int
     for row in data:
         row.pop("supplier_id", None)
         row.pop("party_id", None)
-        
+
     return data
 
-def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+
+def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str, end_date: str, **kwargs) -> List[Dict]:
     """
     Returns a list of all bill_number's amount and date.
     Single supplier-party version that calls the bulk version for consistency.
@@ -337,14 +369,29 @@ def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str,
     return get_supplier_register_data_bulk([supplier_id], [party_id], start_date, end_date)
 
 
-def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
+def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str, supplier_all: bool = False, party_all: bool = False) -> List[Dict]:
     """
     Get all pending bills info between multiple suppliers and parties.
     Optimized version that fetches data in bulk when all suppliers/parties are selected.
     """
-    # Convert lists to strings for SQL IN clause
-    supplier_ids_str = ','.join(map(str, supplier_ids))
-    party_ids_str = ','.join(map(str, party_ids))
+    # Build WHERE clause based on all flags
+    where_clauses = []
+
+    if not supplier_all:
+        supplier_ids_str = ','.join(map(str, supplier_ids))
+        where_clauses.append(f"supplier_id IN ({supplier_ids_str})")
+
+    if not party_all:
+        party_ids_str = ','.join(map(str, party_ids))
+        where_clauses.append(f"party_id IN ({party_ids_str})")
+
+    where_clauses.extend([
+        f"register_date >= '{start_date}'",
+        f"register_date <= '{end_date}'",
+        "status != 'F'"
+    ])
+
+    where_clause = " AND ".join(where_clauses)
 
     query = """
         WITH pending_bills AS (
@@ -359,11 +406,7 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
                 register_entry.supplier_id,
                 register_entry.party_id
             FROM register_entry
-            WHERE supplier_id IN ({}) 
-            AND party_id IN ({})
-            AND register_date >= '{}'
-            AND register_date <= '{}'
-            AND status != 'F'
+            WHERE {}
             ORDER BY register_date DESC
         )
         SELECT 
@@ -375,7 +418,7 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
         LEFT JOIN memo_bills mb ON pb.bill_id = mb.bill_id
         LEFT JOIN memo_entry me ON mb.memo_id = me.id
         ORDER BY pb.bill_date DESC;
-    """.format(supplier_ids_str, party_ids_str, start_date, end_date)
+    """.format(where_clause)
 
     result = execute_query(query)
     bills_data = result["result"]
@@ -400,7 +443,7 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
 
     return data
 
-def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str, **kwargs) -> List[Dict]:
     """
     Get all pending bills info between supplier and party.
     Single supplier-party version that calls the bulk version for consistency.
@@ -496,7 +539,8 @@ def legacy_one_memo(curr_pld: Tuple, curr_memo: Tuple) -> List[Tuple]:
     if curr_pld[4] < 40:
         bill_tuple = [(curr_memo[0], curr_memo[1], curr_memo[2], curr_memo[3], "-", "-", curr_pld[2], curr_pld[0], curr_pld[3])]
     elif 40 <= curr_pld[4] <= 70:
-        bill_tuple = [(curr_memo[0], curr_memo[1], curr_memo[2], curr_memo[3], "-", curr_pld[2], "-", curr_pld[0], curr_pld[3])]
+        bill_tuple = [(curr_memo[0], curr_memo[1], curr_memo[2],
+                       curr_memo[3], "-", curr_pld[2], "-", curr_pld[0], curr_pld[3])]
     else:
         bill_tuple = [(curr_memo[0], curr_memo[1], curr_memo[2], curr_memo[3], curr_pld[2], "-", "-", curr_pld[0], curr_pld[3])]
 
