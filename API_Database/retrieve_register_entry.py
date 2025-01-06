@@ -368,9 +368,9 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
         )
         SELECT 
             pb.*,
-            COALESCE(me.memo_number, '') as part_no,
+            COALESCE(me.memo_number::text, '') as part_no,
             COALESCE(TO_CHAR(me.register_date, 'DD/MM/YYYY'), '') as part_date,
-            COALESCE(mb.amount::TEXT, '') as part_amt
+            COALESCE(mb.amount::text, '') as part_amt
         FROM pending_bills pb
         LEFT JOIN memo_bills mb ON pb.bill_id = mb.bill_id
         LEFT JOIN memo_entry me ON mb.memo_id = me.id
@@ -390,6 +390,12 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
         bill.pop("supplier_id", None)
         bill.pop("party_id", None)
         bill.pop("bill_id", None)
+        
+        # Convert None to empty string for part fields
+        bill["part_no"] = bill["part_no"] or ""
+        bill["part_date"] = bill["part_date"] or ""
+        bill["part_amt"] = bill["part_amt"] or ""
+        
         data.append(bill)
 
     return data
