@@ -188,109 +188,194 @@ def _pop_dict_keys(pop_dict: dict, keys: List[str]) -> dict:
         pop_dict.pop(key, None)
     return pop_dict
 
-def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+def get_khata_data_by_date_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
     """
-    Returns a list of all bill_number's amount and date between the given dates
+    Returns a list of all bill_number's amount and date between the given dates for multiple suppliers and parties.
+    Optimized version that fetches data in bulk when all suppliers/parties are selected.
     """
-
-    data = []
-
-    # Updated query to include register_entry.id as bill_id
+    # Convert lists to strings for SQL IN clause
+    supplier_ids_str = ','.join(map(str, supplier_ids))
+    party_ids_str = ','.join(map(str, party_ids))
+    
+    # Use CTE for better query organization
     query = """
+        WITH bills_data AS (
+            SELECT 
+                register_entry.id as bill_id,
+                register_entry.bill_number as bill_no,
+                to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date,
+                register_entry.amount::integer as bill_amt,
+                register_entry.status as bill_status,
+                register_entry.supplier_id,
+                register_entry.party_id
+            FROM register_entry
+            WHERE register_entry.supplier_id IN ({}) 
+            AND register_entry.party_id IN ({})
+            AND register_date >= '{}' 
+            AND register_date <= '{}'
+            ORDER BY register_entry.register_date, register_entry.bill_number
+        ),
+        memo_data AS (
+            SELECT 
+                memo_entry.memo_number as memo_no,
+                memo_bills.amount as memo_amt,
+                to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date,
+                memo_entry.amount as chk_amt,
+                memo_bills.type as memo_type,
+                memo_bills.bill_id,
+                memo_entry.supplier_id,
+                memo_entry.party_id
+            FROM memo_entry
+            JOIN memo_bills ON memo_entry.id = memo_bills.memo_id
+            WHERE memo_entry.supplier_id IN ({})
+            AND memo_entry.party_id IN ({})
+        )
         SELECT 
-            register_entry.bill_number as bill_no,
-            to_char(register_entry.register_date, 'DD/MM/YYYY') as bill_date,
-            register_entry.amount::integer as bill_amt,
-            register_entry.status as bill_status,
-            register_entry.id as bill_id
-        FROM register_entry
-        WHERE party_id = '{}' AND supplier_id = '{}' AND register_date >= '{}' AND register_date <= '{}'
-        ORDER BY register_entry.register_date, register_entry.bill_number;
-    """.format(party_id, supplier_id, start_date, end_date)
+            b.*,
+            m.memo_no,
+            m.memo_amt,
+            m.memo_date,
+            m.chk_amt,
+            m.memo_type
+        FROM bills_data b
+        LEFT JOIN memo_data m ON b.bill_id = m.bill_id 
+        AND b.supplier_id = m.supplier_id 
+        AND b.party_id = m.party_id
+        ORDER BY b.bill_date, b.bill_no;
+    """.format(supplier_ids_str, party_ids_str, start_date, end_date, supplier_ids_str, party_ids_str)
+
     result = execute_query(query)
     bills_data = result["result"]
 
     if len(bills_data) == 0:
         return bills_data
 
-    # dummy memo_bill_retrieval
+    # Process the results to match original format
+    data = []
     dummy_memo = {"memo_no": "", "memo_amt": "", "memo_date": "", "chk_amt": "", "memo_type": ""}
-
-    for bills in bills_data:
-        bill_id = bills.pop("bill_id")  # Remove bill_id from the bill data
+    
+    current_bill = None
+    for row in bills_data:
+        # Remove internal fields used for sorting/joining
+        row.pop("supplier_id", None)
+        row.pop("party_id", None)
+        row.pop("bill_id", None)
         
-        # Use bill_id instead of bill_number
-        query_2 = """
-            SELECT 
-                memo_entry.memo_number as memo_no,
-                memo_bills.amount as memo_amt,
-                to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date,
-                memo_entry.amount as chk_amt,
-                memo_bills.type as memo_type
-            FROM memo_entry
-            JOIN memo_bills ON (memo_entry.id = memo_bills.memo_id)
-            WHERE memo_bills.bill_id = '{}' AND memo_entry.supplier_id = '{}' AND memo_entry.party_id = '{}';
-        """.format(bill_id, supplier_id, party_id)
-        result = execute_query(query_2)
-        memo_data = result["result"]
-
-        if len(memo_data) != 0:
-            for nums in range(len(memo_data)):
-                if nums == 0:
-                    data_dict = {**bills, **memo_data[nums]}
-                else:
-                    data_dict = {**memo_data[nums]}
-                data.append(data_dict)
+        if current_bill != (row["bill_no"], row["bill_date"]):
+            # New bill entry
+            current_bill = (row["bill_no"], row["bill_date"])
+            if row["memo_no"]:
+                # Bill with memo
+                data.append(row)
+            else:
+                # Bill without memo
+                bill_data = {k:v for k,v in row.items() if k not in ["memo_no", "memo_amt", "memo_date", "chk_amt", "memo_type"]}
+                data.append({**bill_data, **dummy_memo})
         else:
-            data.append({**bills, **dummy_memo})
+            # Additional memo for same bill
+            memo_data = {k:v for k,v in row.items() if k in ["memo_no", "memo_amt", "memo_date", "chk_amt", "memo_type"]}
+            if any(memo_data.values()):  # Only add if memo has data
+                data.append(memo_data)
 
     return data
 
-
-def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Tuple]:
+def get_khata_data_by_date(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
     """
-        Returns a list of all bill_number's amount and date
-        """
-    # Open a new connection
-    db, cursor = db_connector.cursor(True)
-
-    query = "select to_char(register_date, 'DD/MM/YYYY') as bill_date, " \
-            "party.name as party_name, supplier.name as supplier_name, "\
-            "bill_number as bill_no, amount::integer as bill_amt, " \
-            "CASE WHEN status='F' THEN '0'" \
-            "ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) END AS pending_amt," \
-            "status from " \
-            "register_entry JOIN party ON party.id = register_entry.party_id " \
-            "join supplier on supplier.id = register_entry.supplier_id " \
-            "where supplier_id = '{}' AND party_id = '{}' AND " \
-            "register_date >= '{}' AND register_date <= '{}' ORDER BY register_entry.register_date, register_entry.bill_number;". \
-        format(supplier_id, party_id, start_date, end_date)
-
-    cursor.execute(query)
-    data = cursor.fetchall()
-    db.close()
-    return data
-
-
-def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+    Returns a list of all bill_number's amount and date between the given dates.
+    Single supplier-party version that calls the bulk version for consistency.
     """
-    Get all pending bills info between supplier and party, without including bill_id in the output.
-    """
+    return get_khata_data_by_date_bulk([supplier_id], [party_id], start_date, end_date)
 
-    # Initial query to fetch pending bills, including bill_id internally
+
+def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
+    """
+    Returns a list of all bill_number's amount and date for multiple suppliers and parties.
+    Optimized version that fetches data in bulk when all suppliers/parties are selected.
+    """
+    # Convert lists to strings for SQL IN clause
+    supplier_ids_str = ','.join(map(str, supplier_ids))
+    party_ids_str = ','.join(map(str, party_ids))
+    
     query = """
         SELECT 
-            register_entry.bill_number AS bill_no,
-            CAST(register_entry.amount AS INTEGER) AS bill_amt,
-            TO_CHAR(register_entry.register_date, 'DD/MM/YYYY') AS bill_date,
-            (register_entry.amount - register_entry.partial_amount - register_entry.gr_amount - register_entry.deduction) AS pending_amt,
-            DATE_PART('day', NOW() - register_entry.register_date)::INTEGER AS days,
-            register_entry.status,
-            register_entry.id AS bill_id  
-        FROM register_entry
-        WHERE supplier_id = '{}' AND party_id = '{}' AND register_date >= '{}' AND register_date <= '{}'
-          AND status != 'F';
-    """.format(supplier_id, party_id, start_date, end_date)
+            to_char(register_date, 'DD/MM/YYYY') as bill_date,
+            party.name as party_name,
+            supplier.name as supplier_name,
+            bill_number as bill_no,
+            amount::integer as bill_amt,
+            CASE WHEN status='F' THEN '0'
+                 ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) 
+            END AS pending_amt,
+            status,
+            register_entry.supplier_id,
+            register_entry.party_id
+        FROM register_entry 
+        JOIN party ON party.id = register_entry.party_id
+        JOIN supplier ON supplier.id = register_entry.supplier_id
+        WHERE supplier_id IN ({}) 
+        AND party_id IN ({})
+        AND register_date >= '{}'
+        AND register_date <= '{}'
+        ORDER BY supplier_name, party_name, register_date, bill_number;
+    """.format(supplier_ids_str, party_ids_str, start_date, end_date)
+
+    result = execute_query(query)
+    data = result["result"]
+    
+    # Remove internal IDs before returning
+    for row in data:
+        row.pop("supplier_id", None)
+        row.pop("party_id", None)
+        
+    return data
+
+def get_supplier_register_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+    """
+    Returns a list of all bill_number's amount and date.
+    Single supplier-party version that calls the bulk version for consistency.
+    """
+    return get_supplier_register_data_bulk([supplier_id], [party_id], start_date, end_date)
+
+
+def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], start_date: str, end_date: str) -> List[Dict]:
+    """
+    Get all pending bills info between multiple suppliers and parties.
+    Optimized version that fetches data in bulk when all suppliers/parties are selected.
+    """
+    # Convert lists to strings for SQL IN clause
+    supplier_ids_str = ','.join(map(str, supplier_ids))
+    party_ids_str = ','.join(map(str, party_ids))
+
+    query = """
+        WITH pending_bills AS (
+            SELECT 
+                register_entry.bill_number AS bill_no,
+                CAST(register_entry.amount AS INTEGER) AS bill_amt,
+                TO_CHAR(register_entry.register_date, 'DD/MM/YYYY') AS bill_date,
+                (register_entry.amount - register_entry.partial_amount - register_entry.gr_amount - register_entry.deduction) AS pending_amt,
+                DATE_PART('day', NOW() - register_entry.register_date)::INTEGER AS days,
+                register_entry.status,
+                register_entry.id AS bill_id,
+                register_entry.supplier_id,
+                register_entry.party_id
+            FROM register_entry
+            WHERE supplier_id IN ({}) 
+            AND party_id IN ({})
+            AND register_date >= '{}'
+            AND register_date <= '{}'
+            AND status != 'F'
+            ORDER BY register_date DESC
+        )
+        SELECT 
+            pb.*,
+            COALESCE(me.memo_number, '') as part_no,
+            COALESCE(TO_CHAR(me.register_date, 'DD/MM/YYYY'), '') as part_date,
+            COALESCE(mb.amount::TEXT, '') as part_amt
+        FROM pending_bills pb
+        LEFT JOIN memo_bills mb ON pb.bill_id = mb.bill_id
+        LEFT JOIN memo_entry me ON mb.memo_id = me.id
+        ORDER BY pb.bill_date DESC;
+    """.format(supplier_ids_str, party_ids_str, start_date, end_date)
 
     result = execute_query(query)
     bills_data = result["result"]
@@ -298,16 +383,23 @@ def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_
     if not bills_data:
         return bills_data
 
-    # Dummy memo data
-    dummy_memo = {"part_no": "", "part_date": "", "part_amt": ""}
-
+    # Process results to match original format
     data = []
     for bill in bills_data:
-        del bill["bill_id"]  # Remove bill_id from output data
-        # For now, we'll append the bill data with dummy memo data
-        data.append({**dummy_memo, **bill})
+        # Remove internal IDs
+        bill.pop("supplier_id", None)
+        bill.pop("party_id", None)
+        bill.pop("bill_id", None)
+        data.append(bill)
 
     return data
+
+def get_payment_list_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Dict]:
+    """
+    Get all pending bills info between supplier and party.
+    Single supplier-party version that calls the bulk version for consistency.
+    """
+    return get_payment_list_data_bulk([supplier_id], [party_id], start_date, end_date)
 
 
 def get_payment_list_summary_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> List[Tuple]:
