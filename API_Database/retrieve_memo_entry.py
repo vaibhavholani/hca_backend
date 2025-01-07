@@ -26,15 +26,13 @@ def check_new_memo(memo_number: int,
     response = execute_query(query)
     result = response["result"]
 
-    if len(result) > 1:
-        raise DataError(
-            f"Error with memo_number {memo_number}, more than one entries in memo_entry.")
+
     if len(result) == 0:
         return True
 
-    memo = result[0]
-    if (date - memo["register_date"]).days >= 30:
-        return True
+    # memo = result[0]
+    # if (date - memo["register_date"]).days >= 365:
+    #     return True
 
     return False
 

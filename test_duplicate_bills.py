@@ -158,7 +158,7 @@ def run_duplicate_bills_test():
                 raise
 
             # Test Case 8: Create part memo
-            memo_number = 5517766
+            memo_number = 551766
             memo_amount = 2000
             memo_input = {
                 'memo_number': memo_number,
@@ -213,7 +213,7 @@ def run_duplicate_bills_test():
             remaining_amount = total_pending - memo_amount - gr_amount - deduction
 
             full_memo_input = {
-                'memo_number': 394470334,
+                'memo_number': 3970334,
                 'register_date': '2024-02-15',
                 'amount': remaining_amount,
                 'gr_amount': gr_amount,
@@ -231,7 +231,7 @@ def run_duplicate_bills_test():
             cleanup_list.append(full_memo)
 
             full_memo = MemoEntry.retrieve(
-                test_supplier_id, test_party_id, 394470334)
+                test_supplier_id, test_party_id, 3970334)
             
             # Get updated register entries
             retrieved_entry_1 = RegisterEntry.retrieve(
