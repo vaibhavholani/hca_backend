@@ -44,7 +44,7 @@ def test_payment_list():
         "report": "payment_list",
         "suppliers": json.dumps([]),
         "parties": json.dumps([]),
-        "from": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+        "from": (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
         "to": datetime.now().strftime("%Y-%m-%d"),
         "supplierAll": True,
         "partyAll": True
@@ -112,8 +112,8 @@ if __name__ == "__main__":
     print("Testing report generation with all suppliers and all parties...")
     print("=" * 60)
     
-    test_khata_report()
-    # test_payment_list()
+    # test_khata_report()
+    test_payment_list()
     # test_supplier_register()
     
     print("\nAll tests completed.")

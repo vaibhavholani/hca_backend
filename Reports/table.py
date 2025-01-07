@@ -307,12 +307,12 @@ class MetaTable:
     def merge_dicts_parallel(dict_a, dict_b):
         merged_dicts = []
         for dict_a_i, dict_b_i in zip_longest(dict_a, dict_b, fillvalue={}):
-            # remove keys in dict_b_i which are already in dict_a_i
+            # Remove keys in dict_b_i which are already in dict_a_i
             for key in dict_a_i:
                 if key in dict_b_i:
+                    if dict_b_i[key] is not None and dict_b_i[key] != '':
+                        print(f"WARNING: Duplicate key {key} in second dict is removed in merge_dicts_parallel")
                     dict_b_i.pop(key)
-                    print(
-                        "WARNING: Duplicate keys in second dict is removed in merge_dicts_parallel")
             merged_dict = {**dict_a_i, **dict_b_i}
             merged_dicts.append(merged_dict)
         return merged_dicts

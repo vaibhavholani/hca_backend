@@ -7,6 +7,7 @@ from Exceptions import DataError
 from psql import db_connector, execute_query
 from API_Database.utils import parse_date, sql_date
 from API_Database.retrieve_partial_payment import get_partial_payment
+from API_Database.retrieve_partial_payment import get_partial_payment_bulk
 from pypika import Query, Table, Field, functions as fn
 import sys
 sys.path.append("../")
@@ -256,7 +257,7 @@ def get_total_memo_entity_bulk(supplier_ids: List[int],
     """
     # Handle the case if memo_type is "PR"
     if memo_type == "PR":
-        from API_Database.retrieve_partial_payment import get_partial_payment_bulk
+        
         result = get_partial_payment_bulk(supplier_ids, party_ids, supplier_all, party_all)
         return sum(row["memo_amt"] for row in result)
 
