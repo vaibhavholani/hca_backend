@@ -100,7 +100,7 @@ def get_all_order_forms(**kwargs):
     return response["result"]
 
 
-def get_order_form_report_data(supplier_id: int, party_id: int, start_date: str, end_date: str) -> list:
+def get_order_form_report_data(supplier_id: int, party_id: int, start_date: str, end_date: str, **kwargs) -> list:
     """
     Returns a list containing the Order Form Number, Register Date, Supplier Name,
     Supplier Address, Party Name, and Order Form Status for the given supplier and party.
