@@ -78,25 +78,50 @@ class MetaTable:
             input_args["supplier_all"] = supplier_all
             input_args["party_all"] = party_all
 
+            print("Fetching bulk data rows...")
+
             # Fetch all data in one query
             data_rows = self.data_rows_bulk(**input_args)
 
             # Add part data if needed
             part_args = {**input_args}
+
+            
             if "supplier_id" in part_args:
                 part_args["supplier_ids"] = [part_args.pop("supplier_id")]
             if "party_id" in part_args:
                 part_args["party_ids"] = [part_args.pop("party_id")]
 
+            print ("Fetching part data...")
+            
             if self.part_display_mode == "column":
-                data_rows = self.merge_dicts_parallel(
-                    self.generate_part_columns_bulk(**part_args), data_rows)
+                part_data = self.generate_part_columns_bulk(**part_args)
             elif self.part_display_mode == "row":
-                data_rows.extend(self.generate_part_rows_bulk(**part_args))
+                part_data = self.generate_part_rows_bulk(**part_args)
+            else:
+                part_data = []
+
+            print("Grouping part data...")
+
+            # Group part data by supplier_id and party_id
+            grouped_part_data = {}
+
+            for part in part_data:
+                header_id = part.pop("supplier_id") if self.header_supplier else part.pop("party_id")
+                subheader_id = part.pop("party_id") if self.header_supplier else part.pop("supplier_id")
+                if header_id and subheader_id: 
+                    if header_id not in grouped_part_data:
+                        grouped_part_data[header_id] = {}
+                    if subheader_id not in grouped_part_data[header_id]:
+                        grouped_part_data[header_id][subheader_id] = []
+                    grouped_part_data[header_id][subheader_id].append(part)
+            
+            print("Grouping Data Rows")
 
             # Group data by header and subheader for efficient processing
             grouped_data = {}
             for row in data_rows:
+                
                 header_id = row.get("header_id")
                 subheader_id = row.get("subheader_id")
                 if header_id and subheader_id:
@@ -154,17 +179,8 @@ class MetaTable:
             # Generate total rows before formatting
             total_rows = []
 
-            # Format numeric columns after totals are calculated
-            for row in processed_rows:
-                for column in self.numeric_columns:
-                    try:
-                        if column in row:
-                            row[column] = self._format_indian_currency(
-                                (row[column]))
-                    except Exception as e:
-                        print(f"Error formatting column {column}: {str(e)}")
+            return processed_rows, grouped_part_data, total_rows, cumulatives
 
-            return processed_rows, total_rows, cumulatives
 
         except Exception as e:
             print(f"Error in generate_data_rows_bulk: {str(e)}")
@@ -219,7 +235,7 @@ class MetaTable:
         )
         part_columns = []
         for part in part_data:
-            part_column = {}
+            part_column = {"supplier_id": part["supplier_id"], "party_id": part["party_id"]}
             for part_key in part:
                 if part_key == "memo_no":
                     part_column["part_no"] = part[part_key]

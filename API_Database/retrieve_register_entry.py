@@ -373,16 +373,18 @@ def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int
 
     query = """
         SELECT 
-            register_entry.supplier_id as header_id,
-            register_entry.party_id as subheader_id,
-            to_char(register_date, 'DD/MM/YYYY') as bill_date,
-            party.name as party_name,
-            supplier.name as supplier_name,
-            bill_number as bill_no,
-            amount::integer as bill_amt,
-            CASE WHEN status='F' THEN '0'
-                 ELSE (amount - (partial_amount)-(gr_amount)-(deduction)) 
-            END AS pending_amt,
+            register_entry.supplier_id AS header_id,
+            register_entry.party_id AS subheader_id,
+            to_char(register_date, 'DD/MM/YYYY') AS bill_date,
+            party.name AS party_name,
+            supplier.name AS supplier_name,
+            bill_number AS bill_no,
+            amount::integer AS bill_amt,
+            CAST(
+                CASE WHEN status = 'F' THEN '0'
+                    ELSE (amount - (partial_amount) - (gr_amount) - (deduction)) 
+                END AS INTEGER
+            ) AS pending_amt,
             status,
             register_entry.supplier_id,
             register_entry.party_id
@@ -392,6 +394,7 @@ def get_supplier_register_data_bulk(supplier_ids: List[int], party_ids: List[int
         WHERE {}
         ORDER BY supplier_name, party_name, register_date, bill_number;
     """.format(where_clause)
+
 
     result = execute_query(query)
     data = result["result"]
@@ -454,20 +457,19 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
                 register_entry.bill_number AS bill_no,
                 CAST(register_entry.amount AS INTEGER) AS bill_amt,
                 TO_CHAR(register_entry.register_date, 'DD/MM/YYYY') AS bill_date,
-                register_entry.register_date as raw_date,
                 (register_entry.amount - register_entry.partial_amount - register_entry.gr_amount - register_entry.deduction) AS pending_amt,
                 DATE_PART('day', NOW() - register_entry.register_date)::INTEGER AS days,
                 register_entry.status,
                 register_entry.id AS bill_id,
                 register_entry.supplier_id,
                 register_entry.party_id,
-                party.name as party_name,
-                supplier.name as supplier_name
+                party.name AS party_name,
+                supplier.name AS supplier_name
             FROM register_entry
             JOIN party ON party.id = register_entry.party_id
             JOIN supplier ON supplier.id = register_entry.supplier_id
             WHERE {}
-            ORDER BY party.name, supplier.name, register_entry.register_date, register_entry.bill_number
+            ORDER BY register_date DESC
         )
         SELECT 
             pb.header_id,
@@ -487,7 +489,7 @@ def get_payment_list_data_bulk(supplier_ids: List[int], party_ids: List[int], st
         FROM pending_bills pb
         LEFT JOIN memo_bills mb ON pb.bill_id = mb.bill_id
         LEFT JOIN memo_entry me ON mb.memo_id = me.id
-        ORDER BY party_name, supplier_name, pb.raw_date, pb.bill_no;
+        ORDER BY party_name, supplier_name, pb.bill_date, pb.bill_no, me.memo_number DESC;
     """.format(where_clause)
 
     result = execute_query(query)

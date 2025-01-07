@@ -33,7 +33,9 @@ def get_partial_payment_bulk(supplier_ids: List[int], party_ids: List[int], supp
             FROM part_payments
             WHERE {}
         )
-        SELECT 
+        SELECT
+            memo_entry.supplier_id as supplier_id, 
+            memo_entry.party_id as party_id,
             memo_entry.memo_number as memo_no,
             to_char(memo_entry.register_date, 'DD/MM/YYYY') as memo_date,
             memo_entry.amount as chk_amt,
@@ -42,8 +44,10 @@ def get_partial_payment_bulk(supplier_ids: List[int], party_ids: List[int], supp
         FROM unused_parts
         JOIN memo_entry ON memo_entry.id = unused_parts.memo_id
         JOIN memo_bills ON memo_entry.id = memo_bills.memo_id
+        JOIN supplier ON memo_entry.supplier_id = supplier.id
+        JOIN party ON memo_entry.party_id = party.id
         WHERE memo_bills.type = 'PR'
-        ORDER BY memo_entry.register_date, memo_entry.memo_number;
+        ORDER BY supplier.name, party.name, memo_entry.register_date, memo_entry.memo_number;
     """.format(where_clause)
 
     result = execute_query(query)

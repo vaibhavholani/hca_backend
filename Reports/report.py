@@ -45,13 +45,15 @@ class Report:
         Generate table data. Uses bulk methods when all flags are set.
         """
         if self.report_type == "header":
-            if supplier_all or party_all:
-                return self.generate_header_table_bulk(supplier_all, party_all)
-            return self.generate_header_table()
+            # if supplier_all or party_all:
+            #     return self.generate_header_table_bulk(supplier_all, party_all)
+            # return self.generate_header_table()
+            return self.generate_header_table_bulk(supplier_all, party_all)
         elif self.report_type == "header_subheader":
-            if supplier_all or party_all:
-                return self.generate_header_subheader_table_bulk(supplier_all, party_all)
-            return self.generate_header_subheader_table()
+            # if supplier_all or party_all:
+            #     return self.generate_header_subheader_table_bulk(supplier_all, party_all)
+            # return self.generate_header_subheader_table()
+            return self.generate_header_subheader_table_bulk(supplier_all, party_all)
 
     def generate_header_subheader_table_bulk(self, supplier_all: bool, party_all: bool) -> Dict:
         """
@@ -73,7 +75,7 @@ class Report:
 
             # Get all data in one query with error handling
             try:
-                data_rows, special_rows, cumulatives = self.table.generate_data_rows_bulk(
+                data_rows, part_data, special_rows, cumulatives = self.table.generate_data_rows_bulk(
                     self.header_ids, self.subheader_ids, 
                     self.start_date, self.end_date,
                     supplier_all=supplier_all, party_all=party_all)
@@ -121,11 +123,18 @@ class Report:
                 # If we've moved to a new subheader within the current header
                 if subheader_id != current_subheader:
                     current_subheader = subheader_id
+
                     current_subheader_data = {
                         "title": subheader_names.get(subheader_id) or self.table.subheader_entity.get_report_name(subheader_id),
                         "dataRows": [],
+                        "partRows": [],
                         "displayOnIndex": True
                     }
+                    
+                    # For each new header, subheader pair add part rows in the data
+                    if part_data:
+                        current_subheader_data["partRows"] = part_data.get(header_id, {}).get(subheader_id, [])
+                    
                     subheader_names[subheader_id] = current_subheader_data["title"]
                     
                     # Add subheader cumulative if available
@@ -145,7 +154,24 @@ class Report:
             # Calculate special rows for each subheader
             for heading in all_data["headings"]:
                 for subheading in heading["subheadings"]:
+                    print("In final loop")
+                    # Add part rows to the data
+                    if self.table.part_display_mode == "column":
+                        subheading["dataRows"] = self.table.merge_dicts_parallel(subheading.pop("partRows"), subheading["dataRows"])
+                    elif self.table.part_display_mode == "row":
+                        subheading["dataRows"].extend(subheading.pop("partRows"))
+
                     subheading["specialRows"] = self.table.generate_total_rows(subheading["dataRows"])
+
+
+                    # Format all rows in  subheading["dataRows"]
+                    for row in subheading["dataRows"]:
+                            for column in self.table.numeric_columns:
+                                try:
+                                    if column in row:
+                                        row[column] = self.table._format_indian_currency(row[column])
+                                except Exception as e:
+                                    print(f"Error formatting column {column}: {str(e)}")
 
             return json.loads(json.dumps(all_data, cls=CustomEncoder))
 
@@ -177,14 +203,15 @@ class Report:
 
             # Get all data in one query with error handling
             try:
-                data_rows, special_rows, base_cumulative = self.table.generate_data_rows_bulk(
+                data_rows, part_data, special_rows, base_cumulative = self.table.generate_data_rows_bulk(
                     self.header_ids, self.subheader_ids, 
                     self.start_date, self.end_date,
                     supplier_all=supplier_all, party_all=party_all)
+
             except Exception as e:
                 print(f"Error fetching bulk data: {str(e)}")
                 return all_data
-
+ 
             # Pre-calculate cumulative values for all headers to avoid redundant calculations
             header_cumulatives = {}
             for header_id in self.header_ids:

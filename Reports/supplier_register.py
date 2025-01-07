@@ -21,6 +21,7 @@ class SupplierRegister(table.HeaderTable):
                     if column in row:
                         # Handle both raw numbers and formatted strings
                         value = str(row[column]).replace(",", "") if row[column] != "" else "0"
+                        value = value.split(".")[0]  # Remove decimal part if present
                         amount = int(value)
                         totals[column] += amount
 
