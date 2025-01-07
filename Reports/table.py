@@ -82,7 +82,6 @@ class MetaTable:
 
             # Fetch all data in one query
             data_rows = self.data_rows_bulk(**input_args)
-
             # Add part data if needed
             part_args = {**input_args}
 
@@ -120,17 +119,31 @@ class MetaTable:
 
             # Group data by header and subheader for efficient processing
             grouped_data = {}
-            for row in data_rows:
-                
-                header_id = row.get("header_id")
-                subheader_id = row.get("subheader_id")
-                if header_id and subheader_id:
-                    if header_id not in grouped_data:
-                        grouped_data[header_id] = {}
-                    if subheader_id not in grouped_data[header_id]:
-                        grouped_data[header_id][subheader_id] = []
-                    grouped_data[header_id][subheader_id].append(row.copy())
 
+            previous_header_id = None
+            previous_subheader_id = None
+
+            for row in data_rows:
+                # Get the current header_id and subheader_id
+                header_id = row.get("header_id") or previous_header_id
+                subheader_id = row.get("subheader_id") or previous_subheader_id
+
+                # Update the previous header_id and subheader_id if they are not None
+                if header_id is not None:
+                    previous_header_id = header_id
+                if subheader_id is not None:
+                    previous_subheader_id = subheader_id
+
+                # Initialize the nested structure if header_id or subheader_id is missing
+                if header_id not in grouped_data:
+                    grouped_data[header_id] = {}
+                if subheader_id not in grouped_data[header_id]:
+                    grouped_data[header_id][subheader_id] = []
+
+                # Append the row to the appropriate group
+                grouped_data[header_id][subheader_id].append(row)
+
+            print("Generating Cumulatives...")
             # Calculate cumulatives and totals
             cumulatives = {
                 'headers': {},
@@ -150,8 +163,8 @@ class MetaTable:
                         cumulative = self.generate_cumulative(
                             header_id, subheader_id,
                             start_date, end_date,
-                            supplier_all=supplier_all,
-                            party_all=party_all
+                            supplier_all=False,
+                            party_all=False
                         )
                         if cumulative:
                             cumulatives['subheaders'][subheader_key] = cumulative
@@ -168,8 +181,8 @@ class MetaTable:
                     cumulative = self.generate_cumulative(
                         header_id, subheader_ids,
                         start_date, end_date,
-                        supplier_all=supplier_all,
-                        party_all=party_all
+                        supplier_all=False,
+                        party_all=False
                     )
                     if cumulative:
                         cumulatives['headers'][header_id] = cumulative
@@ -178,6 +191,8 @@ class MetaTable:
 
             # Generate total rows before formatting
             total_rows = []
+
+            print("Done with table.py")
 
             return processed_rows, grouped_part_data, total_rows, cumulatives
 

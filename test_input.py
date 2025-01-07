@@ -59,11 +59,11 @@ def run_basic_test():
             # create cleanup list
             cleanup_list = []
 
-            test_supplier_input = {"name": "test_suppli42334",
+            test_supplier_input = {"name": "test_sppli42334",
                                    "address": "test_address",
                                    "phone_number": "9350544808"}
 
-            test_party_input = {"name": "test_pa3r4343",
+            test_party_input = {"name": "test_par4343",
                                 "address": "test_address",
                                 "phone_number": "+1 647 901 4404"}
 
@@ -221,7 +221,7 @@ def run_basic_test():
             })
 
             
-            reference = {'title': 'Payment List', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Party Name: test_pa3r4343', 'subheadings': [{'title': 'Supplier Name: test_suppli42334', 'dataRows': [{'part_no': '', 'part_date': '', 'part_amt': '', 'bill_no': 123456, 'bill_amt': '5,000', 'bill_date': '19/06/2023', 'pending_amt': 5000, 'days': 567, 'status': 'N'}], 'specialRows': [{'name': 'Total (=)', 'value': '0', 'column': 'part_amt', 'numeric': 0, 'beforeData': False}, {'name': '<60 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '60-120 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '>120 days (+)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Subtotal (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Part (-)', 'value': '- 0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': 'Pending (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}], 'displayOnIndex': True, 'cumulative': {'name': 'Total Pending', 'value': '5,000'}}], 'cumulative': {'name': 'Total Pending', 'value': '5,000'}}]}
+            reference = {'title': 'Payment List', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Party Name: test_par4343', 'subheadings': [{'title': 'Supplier Name: test_sppli42334', 'dataRows': [{'part_no': '', 'part_date': '', 'part_amt': '', 'bill_no': 123456, 'bill_amt': '5,000', 'bill_date': '19/06/2023', 'pending_amt': 5000, 'days': 567, 'status': 'N'}], 'specialRows': [{'name': 'Total (=)', 'value': '0', 'column': 'part_amt', 'numeric': 0, 'beforeData': False}, {'name': '<60 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '60-120 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '>120 days (+)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Subtotal (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Part (-)', 'value': '- 0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': 'Pending (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}], 'displayOnIndex': True, 'cumulative': {'name': 'Total Pending', 'value': '5,000'}}], 'cumulative': {'name': 'Total Pending', 'value': '5,000'}}]}
             # try: 
             #     assert og_payment_report == reference
             # except AssertionError:
@@ -231,7 +231,7 @@ def run_basic_test():
 
 
 
-            memo_number1 = 5517766
+            memo_number1 = 2217766
             # Create a Memo Entry
             part_input = {'memo_number': memo_number1,
                           'register_date': '2023-08-04',
@@ -285,7 +285,7 @@ def run_basic_test():
             })
 
 
-            reference = {'title': 'Payment List', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Party Name: test_pa3r4343', 'subheadings': [{'title': 'Supplier Name: test_suppli42334', 'dataRows': [{'part_no': 5517766, 'part_date': '04/08/2023', 'part_amt': '1,250', 'bill_no': 123456, 'bill_amt': '5,000', 'bill_date': '19/06/2023', 'pending_amt': 5000, 'days': 567, 'status': 'N'}], 'specialRows': [{'name': 'Total (=)', 'value': '1,250', 'column': 'part_amt', 'numeric': 1250, 'beforeData': False}, {'name': '<60 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '60-120 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '>120 days (+)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Subtotal (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Part (-)', 'value': '- 1,250', 'column': 'bill_amt', 'numeric': 1250, 'beforeData': False}, {'name': 'Pending (=)', 'value': '3,750', 'column': 'bill_amt', 'numeric': 3750, 'beforeData': False}], 'displayOnIndex': True, 'cumulative': {'name': 'Total Pending', 'value': '3,750'}}], 'cumulative': {'name': 'Total Pending', 'value': '3,750'}}]}
+            reference = {'title': 'Payment List', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Party Name: test_par4343', 'subheadings': [{'title': 'Supplier Name: test_sppli42334', 'dataRows': [{'part_no': 5517766, 'part_date': '04/08/2023', 'part_amt': '1,250', 'bill_no': 123456, 'bill_amt': '5,000', 'bill_date': '19/06/2023', 'pending_amt': 5000, 'days': 567, 'status': 'N'}], 'specialRows': [{'name': 'Total (=)', 'value': '1,250', 'column': 'part_amt', 'numeric': 1250, 'beforeData': False}, {'name': '<60 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '60-120 days (+)', 'value': '0', 'column': 'bill_amt', 'numeric': 0, 'beforeData': False}, {'name': '>120 days (+)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Subtotal (=)', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Part (-)', 'value': '- 1,250', 'column': 'bill_amt', 'numeric': 1250, 'beforeData': False}, {'name': 'Pending (=)', 'value': '3,750', 'column': 'bill_amt', 'numeric': 3750, 'beforeData': False}], 'displayOnIndex': True, 'cumulative': {'name': 'Total Pending', 'value': '3,750'}}], 'cumulative': {'name': 'Total Pending', 'value': '3,750'}}]}
             # try:
             #     assert og_payment_report == reference
             # except AssertionError:
@@ -299,7 +299,7 @@ def run_basic_test():
 
             amount = total_pending_amount - part - deduction - gr_amount
 
-            memo_number2 = 394470334
+            memo_number2 = 3470334
             full_input = {'memo_number': memo_number2,
                           'register_date': '2023-08-04',
                           'amount': amount,
@@ -329,6 +329,8 @@ def run_basic_test():
             # and I am going to write tests with at max 3 register_entries
             register_entry = RegisterEntry.retrieve(
                 register_entry.supplier_id, register_entry.party_id, register_entry.bill_number, register_entry.register_date)
+
+            print("Creating final khata report")
 
             # Test final khata report
             og_report = make_report({
@@ -360,7 +362,7 @@ def run_basic_test():
                 "to": "2023-06-19"
             })
 
-            reference = {'title': 'Supplier Register', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Supplier Name: test_suppli42334', 'subheadings': [{'title': '', 'dataRows': [{'bill_date': '19/06/2023', 'party_name': 'test_pa3r4343', 'bill_no': 123456, 'bill_amt': '5,000', 'pending_amt': '0', 'status': 'F'}], 'specialRows': [{'name': 'Total (=) ', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Pending (=) ', 'value': '0', 'column': 'pending_amt', 'numeric': 0, 'beforeData': False}], 'displayOnIndex': False}]}]}
+            reference = {'title': 'Supplier Register', 'from': '2023-06-19', 'to': '2023-06-19', 'headings': [{'title': 'Supplier Name: test_sppli42334', 'subheadings': [{'title': '', 'dataRows': [{'bill_date': '19/06/2023', 'party_name': 'test_par4343', 'bill_no': 123456, 'bill_amt': '5,000', 'pending_amt': '0', 'status': 'F'}], 'specialRows': [{'name': 'Total (=) ', 'value': '5,000', 'column': 'bill_amt', 'numeric': 5000, 'beforeData': False}, {'name': 'Pending (=) ', 'value': '0', 'column': 'pending_amt', 'numeric': 0, 'beforeData': False}], 'displayOnIndex': False}]}]}
 
             try:
                 assert og_report == reference

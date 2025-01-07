@@ -7,6 +7,8 @@ import decimal
 from datetime import datetime
 
 # Custom JSON encoder for Decimal objects
+
+
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
@@ -15,6 +17,7 @@ class CustomEncoder(json.JSONEncoder):
             return int(obj)
 
         return super(CustomEncoder, self).default(obj)
+
 
 class Report:
     _preset = {"Khata Report": {"class": khata_report.KhataReport, "type": "header_subheader"},
@@ -45,15 +48,16 @@ class Report:
         Generate table data. Uses bulk methods when all flags are set.
         """
         if self.report_type == "header":
-            # if supplier_all or party_all:
-            #     return self.generate_header_table_bulk(supplier_all, party_all)
-            # return self.generate_header_table()
-            return self.generate_header_table_bulk(supplier_all, party_all)
+            if self.table.data_rows_bulk is not None:
+                return self.generate_header_table_bulk(supplier_all, party_all)
+            return self.generate_header_table()
+            
         elif self.report_type == "header_subheader":
+            if self.table.data_rows_bulk is not None:
+                return self.generate_header_subheader_table_bulk(supplier_all, party_all)
             # if supplier_all or party_all:
             #     return self.generate_header_subheader_table_bulk(supplier_all, party_all)
-            # return self.generate_header_subheader_table()
-            return self.generate_header_subheader_table_bulk(supplier_all, party_all)
+            return self.generate_header_subheader_table()
 
     def generate_header_subheader_table_bulk(self, supplier_all: bool, party_all: bool) -> Dict:
         """
@@ -76,7 +80,7 @@ class Report:
             # Get all data in one query with error handling
             try:
                 data_rows, part_data, special_rows, cumulatives = self.table.generate_data_rows_bulk(
-                    self.header_ids, self.subheader_ids, 
+                    self.header_ids, self.subheader_ids,
                     self.start_date, self.end_date,
                     supplier_all=supplier_all, party_all=party_all)
             except Exception as e:
@@ -92,20 +96,20 @@ class Report:
             current_subheader = None
             current_header_data = None
             current_subheader_data = None
-            
+
             for row in data_rows:
-                header_id = row.pop("header_id", None)
-                subheader_id = row.pop("subheader_id", None)
                 
-                if not header_id or not subheader_id:
-                    continue
+                header_id = row.pop("header_id", current_header)
+                subheader_id = row.pop("subheader_id", current_subheader)
+
+
 
                 # If we've moved to a new header
                 if header_id != current_header:
                     # Add the previous header's data if it exists
                     if current_header_data and current_header_data["subheadings"]:
                         all_data["headings"].append(current_header_data)
-                    
+
                     # Start a new header section
                     current_header = header_id
                     current_header_data = {
@@ -113,13 +117,13 @@ class Report:
                         "subheadings": []
                     }
                     header_names[header_id] = current_header_data["title"]
-                    
+
                     # Add header cumulative if available
                     if header_id in header_cumulatives:
                         current_header_data["cumulative"] = header_cumulatives[header_id]
-                    
+
                     current_subheader = None  # Reset subheader tracking
-                
+
                 # If we've moved to a new subheader within the current header
                 if subheader_id != current_subheader:
                     current_subheader = subheader_id
@@ -130,20 +134,22 @@ class Report:
                         "partRows": [],
                         "displayOnIndex": True
                     }
-                    
+
                     # For each new header, subheader pair add part rows in the data
                     if part_data:
-                        current_subheader_data["partRows"] = part_data.get(header_id, {}).get(subheader_id, [])
-                    
+                        current_subheader_data["partRows"] = part_data.get(
+                            header_id, {}).get(subheader_id, [])
+
                     subheader_names[subheader_id] = current_subheader_data["title"]
-                    
+
                     # Add subheader cumulative if available
                     subheader_key = f"{header_id}_{subheader_id}"
                     if subheader_key in subheader_cumulatives:
                         current_subheader_data["cumulative"] = subheader_cumulatives[subheader_key]
-                    
-                    current_header_data["subheadings"].append(current_subheader_data)
-                
+
+                    current_header_data["subheadings"].append(
+                        current_subheader_data)
+
                 # Add the row to the current subheader's data
                 current_subheader_data["dataRows"].append(row)
 
@@ -154,24 +160,27 @@ class Report:
             # Calculate special rows for each subheader
             for heading in all_data["headings"]:
                 for subheading in heading["subheadings"]:
-                    print("In final loop")
                     # Add part rows to the data
                     if self.table.part_display_mode == "column":
-                        subheading["dataRows"] = self.table.merge_dicts_parallel(subheading.pop("partRows"), subheading["dataRows"])
+                        subheading["dataRows"] = self.table.merge_dicts_parallel(
+                            subheading.pop("partRows"), subheading["dataRows"])
                     elif self.table.part_display_mode == "row":
-                        subheading["dataRows"].extend(subheading.pop("partRows"))
+                        subheading["dataRows"].extend(
+                            subheading.pop("partRows"))
 
-                    subheading["specialRows"] = self.table.generate_total_rows(subheading["dataRows"])
-
+                    subheading["specialRows"] = self.table.generate_total_rows(
+                        subheading["dataRows"])
 
                     # Format all rows in  subheading["dataRows"]
                     for row in subheading["dataRows"]:
-                            for column in self.table.numeric_columns:
-                                try:
-                                    if column in row:
-                                        row[column] = self.table._format_indian_currency(row[column])
-                                except Exception as e:
-                                    print(f"Error formatting column {column}: {str(e)}")
+                        for column in self.table.numeric_columns:
+                            try:
+                                if column in row:
+                                    row[column] = self.table._format_indian_currency(
+                                        row[column])
+                            except Exception as e:
+                                print(
+                                    f"Error formatting column {column}: {str(e)}")
 
             return json.loads(json.dumps(all_data, cls=CustomEncoder))
 
@@ -201,35 +210,23 @@ class Report:
             # Cache for entity names to avoid repeated DB lookups
             header_names = {}
 
-            # Get all data in one query with error handling
+            # Get all data in one query
             try:
-                data_rows, part_data, special_rows, base_cumulative = self.table.generate_data_rows_bulk(
-                    self.header_ids, self.subheader_ids, 
+                data_rows, part_data, special_rows, cumulatives = self.table.generate_data_rows_bulk(
+                    self.header_ids, self.subheader_ids,
                     self.start_date, self.end_date,
                     supplier_all=supplier_all, party_all=party_all)
-
             except Exception as e:
                 print(f"Error fetching bulk data: {str(e)}")
                 return all_data
- 
-            # Pre-calculate cumulative values for all headers to avoid redundant calculations
-            header_cumulatives = {}
-            for header_id in self.header_ids:
-                try:
-                    cumulative = self.table.generate_cumulative(
-                        header_id, self.subheader_ids, self.start_date, self.end_date)
-                    if cumulative:
-                        header_cumulatives[header_id] = cumulative
-                except Exception as e:
-                    print(f"Error calculating cumulative for header {header_id}: {str(e)}")
-                    continue
 
             # Process rows in order as they come from the query
             current_header = None
             current_header_data = None
-            
+
             for row in data_rows:
                 header_id = row.pop("header_id", None)
+                subheader_id = row.pop("subheader_id", None)
                 if not header_id:
                     continue
 
@@ -238,7 +235,7 @@ class Report:
                     # Add the previous header's data if it exists
                     if current_header_data and current_header_data["subheadings"][0]["dataRows"]:
                         all_data["headings"].append(current_header_data)
-                    
+
                     # Start a new header section
                     current_header = header_id
                     current_header_data = {
@@ -246,22 +243,51 @@ class Report:
                         "subheadings": [{
                             "title": "",
                             "dataRows": [],
-                            "specialRows": special_rows,
+                            "partRows": [],
                             "displayOnIndex": False
                         }]
                     }
                     header_names[header_id] = current_header_data["title"]
-                    
+
                     # Add header cumulative if available
-                    if header_id in header_cumulatives:
-                        current_header_data["cumulative"] = header_cumulatives[header_id]
-                
+                    if header_id in cumulatives['headers']:
+                        current_header_data["cumulative"] = cumulatives['headers'][header_id]
+
+                    # Add part rows for this header
+                    if part_data:
+                        current_header_data["subheadings"][0]["partRows"] = part_data.get(header_id, [])
+
                 # Add the row to the current header's data
                 current_header_data["subheadings"][0]["dataRows"].append(row)
 
             # Add the last header's data if it exists
             if current_header_data and current_header_data["subheadings"][0]["dataRows"]:
                 all_data["headings"].append(current_header_data)
+
+            # Process part data and calculate special rows for each header
+            for heading in all_data["headings"]:
+                subheading = heading["subheadings"][0]
+                
+                # Add part rows to the data
+                if self.table.part_display_mode == "column":
+                    subheading["dataRows"] = self.table.merge_dicts_parallel(
+                        subheading.pop("partRows"), subheading["dataRows"])
+                elif self.table.part_display_mode == "row":
+                    subheading["dataRows"].extend(subheading.pop("partRows"))
+                else:
+                    subheading.pop("partRows")
+
+                # Calculate special rows using combined data
+                subheading["specialRows"] = self.table.generate_total_rows(subheading["dataRows"])
+
+                # Format numeric columns
+                for row in subheading["dataRows"]:
+                    for column in self.table.numeric_columns:
+                        try:
+                            if column in row:
+                                row[column] = self.table._format_indian_currency(row[column])
+                        except Exception as e:
+                            print(f"Error formatting column {column}: {str(e)}")
 
             return json.loads(json.dumps(all_data, cls=CustomEncoder))
 
