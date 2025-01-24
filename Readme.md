@@ -3,7 +3,7 @@
 ## Python 3.9 Runtime Setup
 ```bash
 # Create the conda enviornment paralle to (NOT INSIDE) directory where hca_backend is clones
-conda create -p hca_venv python==3.9
+conda create -p hca_venv python==3.9 -c conda-forge
 conda activate ./hca_venv
 
 # Install the Requreiments
