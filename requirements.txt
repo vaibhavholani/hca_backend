@@ -13,3 +13,4 @@ phonenumbers
 reportlab
 requests
 supabase
+rapidfuzz
