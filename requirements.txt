@@ -1,6 +1,6 @@
 pytesseract==0.3.10
 Pillow==9.2.0
-openai==0.27.0
+openai>=1.0.0
 opencv-python==4.6.0.66
 flask
 flask-cors
@@ -14,3 +14,6 @@ reportlab
 requests
 supabase
 rapidfuzz
+langchain>=0.1.0
+langchain-openai>=0.0.2
+pydantic>=2.0.0
