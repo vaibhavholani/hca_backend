@@ -1,5 +1,6 @@
+import os
 import pytest
-from OCR.name_matcher import NameMatcher
+from hca_backend.OCR.name_matcher import NameMatcher
 
 class TestNameMatcher:
     @pytest.fixture
@@ -31,7 +32,7 @@ class TestNameMatcher:
     @pytest.mark.integration
     def test_verify_match(self, matcher):
         """Test LLM verification of matches."""
-        if not matcher.llm.api_key:
+        if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OpenAI API key not found")
 
         candidates = [
@@ -57,7 +58,7 @@ class TestNameMatcher:
     @pytest.mark.integration
     def test_find_match(self, matcher):
         """Test the complete matching pipeline."""
-        if not matcher.llm.api_key:
+        if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OpenAI API key not found")
 
         # Test with actual database

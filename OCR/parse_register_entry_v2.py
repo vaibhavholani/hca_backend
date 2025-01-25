@@ -6,6 +6,21 @@ from datetime import datetime
 
 sys.path.append('../')
 
+def get_financial_year() -> str:
+    """Get the current financial year in YY-YY format."""
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+    
+    # If we're in Jan-Mar, we're in the previous year's financial year
+    if current_month <= 3:
+        year1 = str(current_year - 1)[-2:]
+        year2 = str(current_year)[-2:]
+    else:
+        year1 = str(current_year)[-2:]
+        year2 = str(current_year + 1)[-2:]
+    
+    return f"{year1}-{year2}"
+
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from langchain.prompts import ChatPromptTemplate
@@ -41,6 +56,87 @@ class InvoiceParser:
         
         self.output_parser = PydanticOutputParser(pydantic_object=InvoiceData)
         self.prompt = self._create_prompt()
+        self.bill_number_prompt = self._create_bill_number_prompt()
+
+    def _create_bill_number_prompt(self) -> ChatPromptTemplate:
+        """Create the prompt template for bill number processing."""
+        template = """You are an expert in analyzing Indian business invoice numbers.
+
+        Context:
+        - Supplier Name: {supplier_name}
+        - Current Year: {current_year}
+        - Current Financial Year: {financial_year}
+        - Invoice Number: {bill_number}
+
+        Different suppliers use different formats:
+        - Some include their company initials (e.g., if supplier is "Rachit Fashion", they might use "RF/123")
+        - Some include the current year or financial year (e.g., "123/23-24" or "2023/456")
+        - Some use their location or branch codes
+        - Some use separators like "-", "/", or "_"
+
+        Given the supplier name and current year context, extract what appears to be the actual sequential bill number.
+        Ignore:
+        - Company initials (especially if they match the supplier name's initials)
+        - Year indicators (current year or financial year)
+        - Branch/location codes
+        - Other prefixes/suffixes
+
+        Return only the numeric bill number that uniquely identifies this bill in the supplier's sequence.
+        If unsure, return the original number.
+
+        Response format: single line with just the number"""
+        
+        return ChatPromptTemplate.from_messages([
+            ("system", template),
+            ("human", "Process this invoice number with the given context.")
+        ])
+
+    def process_bill_number(self, bill_number: str, supplier_name: str) -> str:
+        """Process bill number using AI to extract the core numeric identifier.
+        
+        Args:
+            bill_number: The original bill number from OCR
+            
+        Returns:
+            Processed bill number (just the core numeric part)
+        """
+        # If it's already purely numeric, return as is
+        if bill_number.isdigit():
+            return bill_number
+            
+        try:
+            # Debug output
+            print(f"\n=== Bill Number Processing ===")
+            print(f"Original bill number: {bill_number}")
+            print(f"Supplier name: {supplier_name}")
+            
+            # Get current year and financial year
+            current_year = str(datetime.now().year)
+            financial_year = get_financial_year()
+            
+            print(f"Current year: {current_year}")
+            print(f"Financial year: {financial_year}")
+            
+            # Format the prompt with all context
+            messages = self.bill_number_prompt.format_messages(
+                bill_number=bill_number,
+                supplier_name=supplier_name,
+                current_year=current_year,
+                financial_year=financial_year
+            )
+            
+            # Get AI response
+            response = self.llm.invoke(messages)
+            processed_number = response.content.strip()
+            
+            # Debug output
+            print(f"Processed bill number: {processed_number}")
+            
+            return processed_number if processed_number else bill_number
+            
+        except Exception as e:
+            print(f"Error processing bill number: {str(e)}")
+            return bill_number
 
     def _create_prompt(self) -> ChatPromptTemplate:
         """Create the prompt template for invoice parsing."""
@@ -90,8 +186,15 @@ class InvoiceParser:
             # Parse and validate the response
             parsed_data = self.output_parser.parse(response.content)
             
-            # Convert to dict for consistency with existing code
-            return parsed_data.model_dump()
+            # Convert to dict and process bill number
+            result = parsed_data.model_dump()
+            if result.get('bill_number'):
+                result['bill_number'] = self.process_bill_number(
+                    result['bill_number'],
+                    result.get('supplier_name', '')  # Pass supplier name for context
+                )
+            
+            return result
 
         except Exception as e:
             print(f"Error parsing invoice: {str(e)}")
@@ -104,18 +207,34 @@ def parse_register_entry(encoded_image: str) -> dict:
         parser = InvoiceParser()
         result = parser.parse_invoice(encoded_image)
         
+        # Debug output for OCR result
+        print("\n=== OCR Output ===")
+        print(f"Raw OCR result: {result}")
+        
         # Initialize name matcher
         matcher = NameMatcher()
         
+        # Debug output before name matching
+        print("\n=== Name Matching ===")
+        print(f"Original supplier name: {result.get('supplier_name')}")
+        print(f"Original party name: {result.get('party_name')}")
+        
         # Match supplier name if present
+        matched_supplier = None
         if result.get('supplier_name'):
             matched_supplier = matcher.find_match(result['supplier_name'], 'supplier')
             result['supplier_name'] = matched_supplier if matched_supplier else result['supplier_name']
         
         # Match party name if present
+        matched_party = None
         if result.get('party_name'):
             matched_party = matcher.find_match(result['party_name'], 'party')
             result['party_name'] = matched_party if matched_party else result['party_name']
+        
+        # Debug output after name matching
+        print("\n=== Final Results ===")
+        print(f"Matched supplier name: {matched_supplier if matched_supplier else 'No match'}")
+        print(f"Matched party name: {matched_party if matched_party else 'No match'}")
         
         return result
     except Exception as e:

@@ -1,25 +1,30 @@
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 from rapidfuzz import process, distance
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 
 from API_Database import retrieve_indivijual
+from .name_cache import NameMatchCache
 
 load_dotenv()
 
 class NameMatcher:
     """A class to match business names using fuzzy matching and LLM verification."""
     
-    def __init__(self):
-        """Initialize the NameMatcher with LLM and load environment variables."""
+    def __init__(self, cache_dir: str = "data"):
+        """Initialize the name matcher with LLM and cache.
+        
+        Args:
+            cache_dir: Directory to store the cache file
+        """
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
 
         self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo",  # Using 3.5 for cost efficiency
+            model="gpt-4o-mini",  # Using 3.5 for cost efficiency
             api_key=api_key,
             temperature=0
         )
@@ -31,8 +36,13 @@ class NameMatcher:
             
             If one of the potential matches is clearly the same business (considering common variations, typos, or abbreviations), return that name.
             If none of the matches seem to be the same business, return 'None'.
+            If you find a match, you MUST return the EXACT string from the potential matches list.
             Response format: single line with match or 'None'""")
         ])
+        
+        # Initialize cache
+        cache_file = os.path.join(cache_dir, "name_match_cache.json")
+        self.cache = NameMatchCache(cache_file)
 
     def get_fuzzy_matches(self, query: str, database_names: List[str], limit: int = 10) -> List[Tuple[str, float]]:
         """Get initial matches using fuzzy matching.
@@ -65,6 +75,12 @@ class NameMatcher:
             for match in matches
         ]
         
+        # Debug output
+        print("\n=== Top Fuzzy Matches ===")
+        print(f"Query: {query}")
+        for name, score in original_case_matches:
+            print(f"Match: {name}, Score: {score}")
+        
         return original_case_matches
 
     def verify_match(self, query: str, candidates: List[str]) -> Optional[str]:
@@ -77,17 +93,40 @@ class NameMatcher:
         Returns:
             The verified match or None if no confident match found
         """
+        # Check cache first
+        cached_result = self.cache.get(query)
+
+        if cached_result:
+            return cached_result
+            
+        # Try exact match first (case-insensitive)
+        for candidate in candidates:
+            if query.lower() == candidate.lower():
+                self.cache.set(query, candidate)
+                return candidate
+            
         try:
             messages = self.prompt.format_messages(
                 query=query,
                 candidates=", ".join(candidates)
             )
             
+            # Debug output before AI call
+            print("\n=== AI Verification ===")
+            print(f"Query sent to AI: {query}")
+            print(f"Candidates sent to AI: {candidates}")
+            
             response = self.llm.invoke(messages)
             result = response.content.strip()
             
-            # If the result is 'None' or not in candidates, return None
-            return result if result in candidates else None
+            # Debug output after AI response
+            print(f"AI response: {result}")
+            
+            # If we found a valid match, cache it
+            if result in candidates:
+                self.cache.set(query, result)
+                return result
+            return None
             
         except Exception as e:
             print(f"Error in LLM verification: {str(e)}")
@@ -104,6 +143,12 @@ class NameMatcher:
             The best matching name or None if no confident match found
         """
         try:
+            # Check cache first
+            cached_result = self.cache.get(query)
+            
+            if cached_result:
+                return cached_result
+            
             # Get all names from database
             data = retrieve_indivijual.get_all_names_ids(entity_type, dict_cursor=False)
             database_names = [y[1] for y in data]
@@ -117,13 +162,24 @@ class NameMatcher:
             candidate_names = [match[0] for match in matches]
             
             # Verify using LLM
-            return self.verify_match(query, candidate_names)
+            result = self.verify_match(query, candidate_names)
+            
+            # Cache the result if we found a match
+            if result:
+                self.cache.set(query, result)
+                
+            return result
             
         except Exception as e:
             print(f"Error in name matching: {str(e)}")
             return None
 
+    def get_cache_stats(self) -> Dict[str, float]:
+        """Get cache performance statistics."""
+        return self.cache.get_stats()
+
 # Example usage:
 # matcher = NameMatcher()
 # result = matcher.find_match("rachit fashion", "supplier")
 # print(f"Match found: {result}")
+# print(f"Cache stats: {matcher.get_cache_stats()}")
