@@ -41,29 +41,35 @@ def cursor(dict = False) -> Tuple:
 
 def execute_query(query: str, dictCursor: bool = True, exec_remote: bool = True, **kwargs):
     """
-    Executes a query and returns the result
+    Executes a query and returns the result.
     """
-    
+
     # Detect query type
     query_type = query.strip().split()[0].upper()
+
+    # If the query starts with "WITH", treat it like a SELECT
+    if query_type == "WITH":
+        query_type = "SELECT"
+
+    # Now check if it's in the list of allowed types
     if query_type not in ["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP"]:
         raise DataError("Invalid query type")
-    
+
     try:
         # connecting to database
         db, cur = cursor(dictCursor)
         cur.execute(query)
         
         if query_type != "SELECT":
+            # If remote execution is enabled, run in a separate thread
             if exec_remote and os.getenv("QUERY_REMOTE") == "true":
                 exec_in_available_thread(execute_remote_query, query)
+            # Committing changes
+            db.commit()
             result = []
         else:
+            # For SELECT (including those that begin with WITH)
             result = cur.fetchall()
-
-        # Committing the changes if query is not SELECT
-        if query_type != "SELECT":
-            db.commit()
 
         db.close()
         return {"result": result, "status": "okay", "message": "Query executed successfully!"}
@@ -71,6 +77,7 @@ def execute_query(query: str, dictCursor: bool = True, exec_remote: bool = True,
     except Exception as e:
         print("Error executing query:", e)
         raise DataError({"status": "error", "message": f"Error with Query Execution: {e}"})
+
 
 
 def update(): pass

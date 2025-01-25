@@ -52,6 +52,8 @@ def print_dict_diff(dict1, dict2, path=""):
             print(f"Difference at {path}:")
             print(f"Value in dict1 = {dict1}")
             print(f"Value in dict2 = {dict2}")
+            if str(dict1) == str(dict2):
+                print(f"Type in dict1 = {type(dict1)} and dict2 = {type(dict2)}")
 
 def cleanup(cls: List[Union[Supplier, Party, RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry]]):
 

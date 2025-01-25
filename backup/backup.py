@@ -13,7 +13,9 @@ def backup_postgresql_database(username, database_name, password, backup_file_pa
             'pg_dump',
             '-U', username,
             '-d', database_name,
-            '-f', backup_file_path
+            '--no-owner',
+            '--no-acl',
+            '-f', backup_file_path,
         ]
 
         # Execute the command

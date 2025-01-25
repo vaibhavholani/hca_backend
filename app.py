@@ -95,7 +95,7 @@ def get_credit(supplier_id: int, party_id: int):
 
 @app.route(BASE + '/pending_bills/<int:supplier_id>/<int:party_id>', methods=['GET'])
 def get_pending_bills(supplier_id: int, party_id: int):
-    data = retrieve_register_entry.get_pending_bills(
+    data = RegisterEntry.get_pending_bills(
         supplier_id, party_id)
     json_data = json.dumps(data)
     return json_data
@@ -205,7 +205,7 @@ def delete(table_name: str):
 
 @app.route(BASE + '/get_memo_bills/<int:id>')
 def get_memo_bills(id: int):
-    data = retrieve_memo_entry.get_memo_bills_by_id(id)
+    data = MemoEntry.get_memo_bills_by_id(id)
     return json.dumps(data)
 
 

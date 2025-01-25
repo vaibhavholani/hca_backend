@@ -11,11 +11,10 @@ from .RegisterEntry import RegisterEntry
 from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
-from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id
+from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id, get_memo_bills_by_id
 from API_Database import update_part_payment
 from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
-
 
 class MemoEntry(Entry):
 
@@ -61,8 +60,7 @@ class MemoEntry(Entry):
                  deduction: int = 0,
                  table_name: str = "memo_entry",
                  *args,
-                 **kwargs
-                 ) -> None:
+                 **kwargs) -> None:
 
         super().__init__(table_name=table_name, *args, **kwargs)
 
@@ -73,43 +71,26 @@ class MemoEntry(Entry):
         self.register_date = sql_date(parse_date(register_date))
         self.gr_amount = gr_amount
         self.deduction = deduction
-
         self.mode = mode
-        self.selected_bills = \
-            RegisterEntry.retrieve(
-                self.supplier_id,
-                self.party_id,
-                selected_bills)
 
+        # selected_bills is now a list of register_entry IDs
+        self.selected_bills = RegisterEntry.retrieve_by_id_list(selected_bills)
         self.payment = payment
-
         self.part_payment = [int(memo_id) for memo_id in selected_part]
-
-        # Memo Bills
         self.memo_bills: List[MemoBill] = []
 
     def full_payment(self) -> None:
-        """
-        Used to complete full payment for bill(s)
-        """
-        # auto assign gr_amount and deduction
         self._auto_assign("gr_amount")
         self._auto_assign("deduction")
 
-        # set bills status to F
         for bill in self.selected_bills:
             bill.status = "F"
-            
             pending_amount = bill.get_pending_amount()
-            
-            # Add Memo Bills
             self.memo_bills.append(
-                MemoBill(bill.bill_number,
+                MemoBill(bill.get_id(),  # Use the register_entry ID
                          pending_amount,
                          "F")
             )
-
-            # update register entry data
             bill.update()
 
     def database_partial_payment(self):
@@ -119,7 +100,7 @@ class MemoEntry(Entry):
 
         # Add Memo bill
         self.memo_bills.append(
-            MemoBill(-1,
+            MemoBill(None,
                      self.amount,
                      "PR")
         )
@@ -159,7 +140,7 @@ class MemoEntry(Entry):
                     setattr(bill, attr_name, bill_new_amount)
 
                     # create memo bill
-                    memo_bill = MemoBill(bill.bill_number,
+                    memo_bill = MemoBill(bill.get_id(),
                                          used_amount,
                                          attr_name[0].upper())
                     # create a memo bill
@@ -169,7 +150,7 @@ class MemoEntry(Entry):
         super_id = super().get_id()
         if super_id is not None: return super_id
         
-        return get_memo_entry_id(self.supplier_id,
+        return MemoEntry.get_memo_entry_id(self.supplier_id,
                                  self.party_id,
                                  self.memo_number)
 
@@ -210,13 +191,34 @@ class MemoEntry(Entry):
                                                   register_date)
 
     @staticmethod
+    def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
+        """
+        Get the memo entry id
+        """
+        return get_memo_entry_id(supplier_id, party_id, memo_number)
+
+    @staticmethod
+    def get_memo_entry(memo_id: int) -> Dict:
+        """
+        Get the memo entry
+        """
+        return get_memo_entry(memo_id)
+
+    @staticmethod
     def get_json(supplier_id: int, party_id: int, memo_number: int) -> Dict:
         """
         Get the json data for the memo entry
         """
-        memo_id = get_memo_entry_id(supplier_id, party_id, memo_number)
-        data = get_memo_entry(memo_id)
+        memo_id = MemoEntry.get_memo_entry_id(supplier_id, party_id, memo_number)
+        data = MemoEntry.get_memo_entry(memo_id)
         return data
+
+    @staticmethod
+    def get_memo_bills_by_id(memo_id: int) -> List[Dict]:
+        """
+        Get the memo bills for a memo entry
+        """
+        return get_memo_bills_by_id(memo_id)
 
     @classmethod
     def retrieve(cls, supplier_id: int, party_id: int, memo_number: int) -> MemoEntry:
@@ -239,12 +241,9 @@ class MemoEntry(Entry):
                           "gr_amount",
                           "deduction"]
 
-        # parse selected bills to only have "id"
         if "selected_bills" in data:
-            data["selected_bills"] = [int(bill["bill_number"]) for bill
-                                      in data["selected_bills"]]
+            data["selected_bills"] = [int(bill["id"]) for bill in data["selected_bills"]]
 
-        # parse payments if required
         if "payment" in data:
             for payment_index in range(len(data["payment"])):
                 info = data["payment"][payment_index]
@@ -262,12 +261,11 @@ class MemoEntry(Entry):
         if parse_memo_bills:
             if "memo_bills" not in data:
                 raise DataError("Memo Bills not found in Data. MemoEntry from Dict Failed")
-            
-            memo_bills = data["memo_bills"]
 
+            memo_bills = data["memo_bills"]
             memo_entry.memo_bills = [MemoBill.from_dict(
                 memo_bill) for memo_bill in memo_bills]
-            
+
         return memo_entry
 
     @classmethod
@@ -275,6 +273,7 @@ class MemoEntry(Entry):
         """
         Adds a memo to the database
         """
+
         #  Check for valid memo number
         if not cls.check_new(**data):
             return {

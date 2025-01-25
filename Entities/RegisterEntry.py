@@ -8,7 +8,7 @@ the bill for an order is received.
 from __future__ import annotations
 from datetime import datetime
 from typing import List, Dict, Union
-from API_Database import insert_register_entry, update_register_entry, utils
+from API_Database import insert_register_entry, update_register_entry, utils, get_register_entry_by_id
 from API_Database import get_register_entry_id, get_register_entry
 from API_Database import get_pending_bills, mark_order_forms_as_registered
 from Exceptions import DataError
@@ -87,7 +87,8 @@ class RegisterEntry(Entry):
         
         return get_register_entry_id(self.supplier_id,
                                     self.party_id, 
-                                    self.bill_number,)
+                                    self.bill_number,
+                                    self.register_date)
     
     def delete(self) -> Dict:
         if self.status == "N":
@@ -136,18 +137,50 @@ class RegisterEntry(Entry):
     @classmethod
     def retrieve(cls, supplier_id: int, 
                  party_id: int, 
-                 bill_number: Union[List[int], int]) -> Union[RegisterEntry, List[RegisterEntry]]:
+                 bill_number: Union[List[Dict], int, str],
+                 register_date: Union[str, datetime] = None) -> Union[RegisterEntry, List[RegisterEntry]]:
+        """
+        Retrieve register entries.
+        
+        For single bill:
+            bill_number: int or str - the bill number
+            register_date: str or datetime - the register date (required)
+            
+        For multiple bills:
+            bill_number: List[Dict] where each dict has:
+                - 'bill_number': int or str
+                - 'register_date': str or datetime
+            register_date: ignored for multiple bills
+        """
         
         # if multiple bills
         if isinstance(bill_number, list):
             bills_data = []
-            for bill in bill_number:
-                bills_data.append(get_register_entry(supplier_id, party_id, bill))
+            for bill_info in bill_number:
+                bill_num = bill_info['bill_number']
+                bill_date = utils.sql_date(utils.parse_date(bill_info['register_date']))
+                bills_data.append(get_register_entry(supplier_id, party_id, bill_num, bill_date))
             return [cls.from_dict(d) for d in bills_data]
         
         # if just one bill
-        bill_data = get_register_entry(supplier_id, party_id, bill_number)
+        if not register_date:
+            raise ValueError("register_date is required for single bill retrieval")
+            
+        register_date = utils.sql_date(utils.parse_date(register_date))
+        bill_data = get_register_entry(supplier_id, party_id, bill_number, register_date)
         return cls.from_dict(bill_data)
+    
+    @classmethod
+    def retrieve_by_id(cls, id: int) -> RegisterEntry:
+        data = get_register_entry_by_id(id)
+        return cls.from_dict(data)
+
+    @classmethod
+    def retrieve_by_id_list(cls, ids: List[int]) -> List[RegisterEntry]:
+        register_entries = []
+        for id in ids:
+            register_entries.append(cls.retrieve_by_id(id))
+        return register_entries
 
     @classmethod
     def insert(cls, data: Dict, get_cls: bool=False) -> Dict:
