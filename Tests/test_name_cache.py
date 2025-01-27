@@ -137,3 +137,28 @@ class TestNameCache:
         # Cleanup
         os.unlink(cache_file)
         os.rmdir(test_dir)
+
+    def test_update_mapping(self, cache):
+        """Test the update_mapping functionality for human corrections."""
+        # Test basic update
+        cache.update_mapping("Original Name", "Corrected Name")
+        assert cache.get("Original Name") == "Corrected Name"
+        
+        # Test update with variations of the same name
+        cache.update_mapping("Original Name Ltd", "Corrected Name")
+        assert cache.get("Original Name") == "Corrected Name"
+        assert cache.get("Original Name Ltd") == "Corrected Name"
+        
+        # Test update with empty values
+        cache.update_mapping("", "Some Name")  # Should not update
+        cache.update_mapping("Some Name", "")  # Should not update
+        cache.update_mapping(None, "Some Name")  # Should not update
+        assert cache.get("") is None
+        assert cache.get(None) is None
+        
+        # Test that update persists
+        stats_before = cache.get_stats()["total_entries"]
+        cache.update_mapping("New Test Name", "New Corrected Name")
+        stats_after = cache.get_stats()["total_entries"]
+        assert stats_after == stats_before + 1
+        assert cache.get("New Test Name") == "New Corrected Name"

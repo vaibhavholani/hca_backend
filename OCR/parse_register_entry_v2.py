@@ -34,8 +34,10 @@ load_dotenv()
 
 class InvoiceData(BaseModel):
     """Data model for invoice information."""
-    supplier_name: str = Field(description="Name of the supplier")
-    party_name: Optional[str] = Field(description="Name of the party")
+    supplier_name: str = Field(description="Raw OCR text for supplier name")
+    supplier_name_matched: Optional[str] = Field(description="Matched supplier name from database")
+    party_name: Optional[str] = Field(description="Raw OCR text for party name")
+    party_name_matched: Optional[str] = Field(description="Matched party name from database")
     date: str = Field(description="Date in yyyy-MM-dd format")
     bill_number: str = Field(description="Bill or invoice number")
     amount: int = Field(description="Total amount")
@@ -200,7 +202,7 @@ class InvoiceParser:
             print(f"Error parsing invoice: {str(e)}")
             raise DataError({"status": "error", "message": f"Error parsing invoice: {str(e)}"})
 
-def parse_register_entry(encoded_image: str) -> dict:
+def parse_register_entry(encoded_image: str, cache_file: Optional[str] = None) -> dict:
     """Main function to parse register entries from images."""
     try:
         # Parse invoice using OCR
@@ -220,22 +222,20 @@ def parse_register_entry(encoded_image: str) -> dict:
         print(f"Original party name: {result.get('party_name')}")
         
         # Match supplier name if present
-        matched_supplier = None
         if result.get('supplier_name'):
             matched_supplier = matcher.find_match(result['supplier_name'], 'supplier')
-            result['supplier_name'] = matched_supplier if matched_supplier else result['supplier_name']
+            result['supplier_name_matched'] = matched_supplier if matched_supplier else result['supplier_name']
         
         # Match party name if present
-        matched_party = None
         if result.get('party_name'):
             matched_party = matcher.find_match(result['party_name'], 'party')
-            result['party_name'] = matched_party if matched_party else result['party_name']
+            result['party_name_matched'] = matched_party if matched_party else result['party_name']
         
         # Debug output after name matching
         print("\n=== Final Results ===")
-        print(f"Matched supplier name: {matched_supplier if matched_supplier else 'No match'}")
-        print(f"Matched party name: {matched_party if matched_party else 'No match'}")
-        
+        print(f"Matched supplier name: {result.get('supplier_name_matched', 'No match')}")
+        print(f"Matched party name: {result.get('party_name_matched', 'No match')}")
+    
         return result
     except Exception as e:
         print(f"Error in parse_register_entry: {str(e)}")

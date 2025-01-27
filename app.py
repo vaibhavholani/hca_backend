@@ -11,6 +11,7 @@ import base64
 
 
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
+from OCR.name_cache import NameMatchCache
 from API_Database import insert_individual, retrieve_all, retrieve_from_id
 from API_Database import edit_individual, delete_entry, retrieve_memo_entry
 from API_Database import update_register_entry, update_memo_entry
@@ -28,9 +29,12 @@ from utils import table_class_mapper
 # load env file
 load_dotenv()
 
-# Crate flask app
+# Create flask app
 app = Flask(__name__)
 CORS(app)
+
+# Initialize name cache
+name_cache = NameMatchCache()
 # stop flask from sorting keys
 app.config['JSON_SORT_KEYS'] = False
 # Change this!
@@ -245,6 +249,40 @@ def parse_register_entry_route():
         return jsonify({'status': 'error', 'message': 'Failed to parse image'}), 500
 
     return jsonify(parsed_data)
+
+@app.route(BASE + '/update_name_mapping', methods=['POST'])
+def update_name_mapping():
+    """Update the name mapping cache with human corrections."""
+    try:
+        data = request.json
+        original_name = data.get('original_name')
+        corrected_name = data.get('corrected_name')
+        entity_type = data.get('entity_type')
+
+        if not all([original_name, corrected_name, entity_type]):
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required fields'
+            }), 400
+
+        if entity_type not in ['supplier', 'party']:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid entity type'
+            }), 400
+
+        name_cache.update_mapping(original_name, corrected_name)
+        
+        return jsonify({
+            'status': 'okay',
+            'message': 'Name mapping updated successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Error updating name mapping: {str(e)}'
+        }), 500
 
 @app.route(BASE + '/fix_problems')
 def fix():

@@ -130,3 +130,22 @@ class NameMatchCache:
             "misses": self.misses,
             "hit_ratio": self.hits / total if total > 0 else 0
         }
+    
+    def update_mapping(self, original_name: str, corrected_name: str) -> None:
+        """Update cache with a human-corrected mapping.
+        
+        This method is called when a user manually corrects an OCR prediction.
+        These corrections take precedence over AI predictions.
+        
+        Args:
+            original_name: The original OCR'd name
+            corrected_name: The correct name selected by the user
+        """
+        if not original_name or not corrected_name:
+            return
+            
+        normalized = self._normalize_name(original_name)
+        if normalized:
+            self.cache[normalized] = corrected_name
+            self._save_cache()
+            print(f"Cache updated: {original_name} -> {corrected_name}")
