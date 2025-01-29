@@ -41,7 +41,7 @@ app.config['JSON_SORT_KEYS'] = False
 app.config["JWT_SECRET_KEY"] = "NHYd198vQNOBa9HrIAGEGNYrKHBegc9Z"
 jwt = JWTManager(app)
 
-BASE = ""
+BASE = "/api"
 
 # Authentication Request
 
