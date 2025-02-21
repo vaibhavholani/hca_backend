@@ -1,0 +1,39 @@
+{
+  "entries": [
+    {
+      "id": "2d8f26e2-de4f-4384-8ae5-31f5f2786933",
+      "image_path": "/Users/vaibhavholani/development/business/global_holani_tradelink/hca_backend/data/ocr_queue/images/2d8f26e2-de4f-4384-8ae5-31f5f2786933.jpg",
+      "ocr_data": {
+        "supplier_name": "SUR SHYAM FASHION",
+        "supplier_name_matched": "SUR SHYAM FASHION",
+        "party_name": "MAHADEV SUIT & SAREES",
+        "party_name_matched": "MAHADEV SUIT &SAREES",
+        "date": "2020-10-14",
+        "bill_number": "529",
+        "amount": 32816
+      },
+      "status": "pending",
+      "upload_time": "2025-01-29T18:54:01.032906"
+    },
+    {
+      "id": "3792ccc8-805d-4c01-85bb-b0669da5facf",
+      "image_path": "/Users/vaibhavholani/development/business/global_holani_tradelink/hca_backend/data/ocr_queue/images/3792ccc8-805d-4c01-85bb-b0669da5facf.jpg",
+      "ocr_data": {
+        "supplier_name": "Shangrila DESIGNER",
+        "supplier_name_matched": "SHANGRILA DESIGNER",
+        "party_name": "KING SAREES",
+        "party_name_matched": "KING SAREE",
+        "date": "2023-10-19",
+        "bill_number": "3420",
+        "amount": 84137
+      },
+      "status": "pending",
+      "upload_time": "2025-01-29T18:54:01.097483"
+    }
+  ],
+  "stats": {
+    "total_processed": 0,
+    "total_pending": 2,
+    "last_processed": null
+  }
+}

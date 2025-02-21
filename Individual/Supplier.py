@@ -16,23 +16,22 @@ class Supplier(Individual):
     address: The address of the supplier.
 
     """
-    table_name = "supplier"
+    table_name = 'supplier'
+
     def __init__(self, name: str, address: str, *args, **kwargs) -> None:
+        """Initializes a Supplier instance by invoking the parent initializer with a preset table name."""
         super().__init__(name, address, table_name=self.table_name, **kwargs)
-    
+
     @staticmethod
     def get_supplier_name_by_id(supplier_id: int) -> str:
         """
         Get supplier name by ID
         """
         return retrieve_indivijual.get_supplier_name_by_id(supplier_id)
-    
+
     @staticmethod
     def get_report_name(supplier_id: int) -> str:
         """
         Get supplier name by ID for report
         """
-        return "Supplier Name: " + retrieve_indivijual.get_supplier_name_by_id(supplier_id)
-
-
-
+        return 'Supplier Name: ' + retrieve_indivijual.get_supplier_name_by_id(supplier_id)

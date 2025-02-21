@@ -7,136 +7,58 @@ from .update_partial_amount import update_part_payment
 from Exceptions import DataError
 from pypika import Query, Table
 
-
 def insert_memo_entry(entry: MemoEntry) -> Dict:
-
-    # Insert Memo Entry using pypika
+    """Inserts a memo entry along with its bills and payments into the database; returns the insertion status."""
     status = insert_memo(entry)
-
-    # Get Memo ID
-    memo_id = MemoEntry.get_memo_entry_id(entry.supplier_id,
-                                                    entry.party_id, 
-                                                    entry.memo_number)
-
-    # Insert Memo Bills
+    memo_id = MemoEntry.get_memo_entry_id(entry.supplier_id, entry.party_id, entry.memo_number)
     for bill in entry.memo_bills:
         status = insert_memo_bill(bill, memo_id)
-
-    # Insert Memo Payments
     for payment in entry.payment:
-        payment["memo_id"] = memo_id
+        payment['memo_id'] = memo_id
         status = insert_memo_payment(payment)
-
-    if entry.mode == "Full":
+    if entry.mode == 'Full':
         for part_memo_id in entry.part_payment:
-            status = update_part_payment(entry.supplier_id,
-                                         entry.party_id,
-                                         memo_id=part_memo_id,
-                                         use_memo_id=memo_id)
-
+            status = update_part_payment(entry.supplier_id, entry.party_id, memo_id=part_memo_id, use_memo_id=memo_id)
         return status
-
-    elif entry.mode == "Part":
+    elif entry.mode == 'Part':
         return insert_part_memo(entry, memo_id)
-
     else:
-        raise DataError("Invalid Memo Type")
-
+        raise DataError('Invalid Memo Type')
 
 def insert_memo(entry: MemoEntry) -> None:
     """
     Insert a memo_entry into the memo_entry table.
     """
-
-    # Define the table
     memo_entry_table = Table('memo_entry')
-
-    # Build the INSERT query using Pypika
-    insert_query = Query.into(memo_entry_table).columns(
-        'supplier_id',
-        'party_id',
-        'memo_number',
-        'register_date',
-        'amount',
-        'gr_amount',
-        'deduction'
-    ).insert(
-        entry.supplier_id,
-        entry.party_id,
-        entry.memo_number,
-        entry.register_date,
-        entry.amount,
-        entry.gr_amount,
-        entry.deduction
-    )
-
-    # Get the raw SQL query and parameters from the Pypika query
+    insert_query = Query.into(memo_entry_table).columns('supplier_id', 'party_id', 'memo_number', 'register_date', 'amount', 'gr_amount', 'deduction').insert(entry.supplier_id, entry.party_id, entry.memo_number, entry.register_date, entry.amount, entry.gr_amount, entry.deduction)
     sql = insert_query.get_sql()
-
-    # Execute the query
     return execute_query(sql)
-
 
 def insert_memo_bill(entry: MemoBill, memo_id: int) -> None:
     """
     Insert all the bills attached to the same memo number.
     """
     memo_bills_table = Table('memo_bills')
-    insert_query = Query.into(memo_bills_table).columns(
-        'memo_id',
-        'bill_id',
-        'type',
-        'amount'
-    ).insert(
-        memo_id,
-        entry.bill_id,
-        entry.type,
-        entry.amount
-    )
-
+    insert_query = Query.into(memo_bills_table).columns('memo_id', 'bill_id', 'type', 'amount').insert(memo_id, entry.bill_id, entry.type, entry.amount)
     sql = insert_query.get_sql()
-    # Handle NULL bill_id
     if entry.bill_id is None:
-        sql = sql.replace(f"{entry.bill_id}", "NULL")
+        sql = sql.replace(f'{entry.bill_id}', 'NULL')
     return execute_query(sql)
-
-
-
 
 def insert_memo_payment(payment: Dict) -> None:
     """
     Add the memo paymentns for the given memo_entry
     """
-
     memo_payments_table = Table('memo_payments')
-    insert_query = Query.into(memo_payments_table).columns(
-        'memo_id',
-        'bank_id',
-        'cheque_number'
-    ).insert(
-        payment["memo_id"],
-        payment["bank_id"],
-        payment["cheque_number"]
-    )
+    insert_query = Query.into(memo_payments_table).columns('memo_id', 'bank_id', 'cheque_number').insert(payment['memo_id'], payment['bank_id'], payment['cheque_number'])
     sql = insert_query.get_sql()
     return execute_query(sql)
-
 
 def insert_part_memo(entry: MemoEntry, memo_id) -> None:
     """
     Insert all the bills attached to the same memo number.
     """
-
     part_payments_table = Table('part_payments')
-    insert_query = Query.into(part_payments_table).columns(
-        'supplier_id',
-        'party_id',
-        'memo_id'
-    ).insert(
-        entry.supplier_id,
-        entry.party_id,
-        memo_id
-    )
-
+    insert_query = Query.into(part_payments_table).columns('supplier_id', 'party_id', 'memo_id').insert(entry.supplier_id, entry.party_id, memo_id)
     sql = insert_query.get_sql()
     return execute_query(sql)

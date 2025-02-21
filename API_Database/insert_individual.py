@@ -1,41 +1,19 @@
 from __future__ import annotations
 from typing import Dict
 from psql import execute_query
-# from Individual import Supplier, Party, Bank, Transporter
-
-# def add_individual(obj):
-#     entity_mapping = {
-#         "supplier": Supplier,
-#         "party": Party,
-#         "bank": Bank,
-#         "transport": Transporter,
-#     }
-#     table_name = obj["entity"]
-#     base_class = entity_mapping.get(table_name)
-#     if base_class:
-#         cls = base_class.create_individual(obj)
-#         table = table_name
-#         return insert_individual(cls, table)
-#     return {"status": "error", "message": f"{base_class} could not be added. Invalid entity type. Please contact Vaibhav"}
-
 
 def insert_individual(entity, table):
-    # Open a new connection
+    """Inserts an individual entity into the specified table and returns the insertion status."""
+
     def remove_single_quotes(value):
-        return value.replace("'", "")
-    
-    # Base columns and values
+        """Removes single quotes from a string to avoid SQL injection issues."""
+        return value.replace("'", '')
     columns = ['name', 'address']
     values = [f"'{remove_single_quotes(entity.name)}'", f"'{remove_single_quotes(entity.address)}'"]
-
-    
-    # Add phone_number column and value if it's not None
     if entity.phone_number is not None:
         columns.append('phone_number')
         values.append(f"'{entity.phone_number}'")
-    
     columns_str = ', '.join(columns)
     values_str = ', '.join(values)
-
-    sql = f"INSERT INTO {table} ({columns_str}) VALUES ({values_str})"
+    sql = f'INSERT INTO {table} ({columns_str}) VALUES ({values_str})'
     return execute_query(sql)

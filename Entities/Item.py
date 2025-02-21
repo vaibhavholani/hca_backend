@@ -17,15 +17,9 @@ class Item(Entry):
     color: the color of the item.
     """
 
-    def __init__(self,
-                 supplier_id: int,
-                 name: str,
-                 color: str = "N/A",
-                 table_name = "item",
-                 *args, 
-                 **kwargs) -> None:
-
-        super().__init__(table_name=table_name, *args, **kwargs)
+    def __init__(self, supplier_id: int, name: str, color: str='N/A', table_name='item', *args, **kwargs) -> None:
+        """Initializes an Item with supplier ID, name, and color (defaults to 'N/A')."""
+        super().__init__(*args, table_name=table_name, **kwargs)
         self.supplier_id = supplier_id
         self.name = name
         self.color = color
@@ -34,7 +28,7 @@ class Item(Entry):
         """
         Updates the item based on the provided update_data dictionary.
         """
-        for key, value in update_data.items():
+        for (key, value) in update_data.items():
             setattr(self, key, value)
         return update_item(self)
 
@@ -43,12 +37,9 @@ class Item(Entry):
         Returns the ID of the item.
         """
         super_id = super().get_id()
-        if super_id is not None: return super_id
-        
-        return get_item_id(self.supplier_id,
-                           self.name,
-                           self.color)
-    
+        if super_id is not None:
+            return super_id
+        return get_item_id(self.supplier_id, self.name, self.color)
 
     @classmethod
     def from_dict(cls, data: Dict, *args, **kwargs) -> Item:
@@ -72,20 +63,16 @@ class Item(Entry):
         """
         data = cls.retrieve(supplier_id=supplier_id, name=name, color=color)
         if not data:
-            raise DataError({"status": "error",
-                             "message": "Item not found",
-                             "input_errors": {"name": {"status": "error", "message": "Invalid criteria"}}})
+            raise DataError({'status': 'error', 'message': 'Item not found', 'input_errors': {'name': {'status': 'error', 'message': 'Invalid criteria'}}})
         return data[0]
-   
+
     @classmethod
-    def insert(cls, data: Dict, get_cls: bool = False) -> Dict:
+    def insert(cls, data: Dict, get_cls: bool=False) -> Dict:
         """
         Inserts a new item into the database.
         """
         new_item = cls.from_dict(data)
         ret = insert_item(new_item)
-
-        if get_cls and ret["status"] == "okay":
-            ret["class"] = new_item
-
+        if get_cls and ret['status'] == 'okay':
+            ret['class'] = new_item
         return ret

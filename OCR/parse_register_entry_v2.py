@@ -202,7 +202,7 @@ class InvoiceParser:
             print(f"Error parsing invoice: {str(e)}")
             raise DataError({"status": "error", "message": f"Error parsing invoice: {str(e)}"})
 
-def parse_register_entry(encoded_image: str, cache_file: Optional[str] = None) -> dict:
+def parse_register_entry(encoded_image: str, cache_file: Optional[str] = None, queue_mode: bool = False) -> dict:
     """Main function to parse register entries from images."""
     try:
         # Parse invoice using OCR
@@ -235,6 +235,19 @@ def parse_register_entry(encoded_image: str, cache_file: Optional[str] = None) -
         print("\n=== Final Results ===")
         print(f"Matched supplier name: {result.get('supplier_name_matched', 'No match')}")
         print(f"Matched party name: {result.get('party_name_matched', 'No match')}")
+        
+        # If queue mode is enabled, store in OCR queue
+        if queue_mode:
+            from .ocr_queue import OCRQueue
+            queue = OCRQueue()
+            entry = {
+                "image": encoded_image,
+                "ocr_data": result
+            }
+            entry_ids = queue.add_entries([entry])
+            result["queue_entry_id"] = entry_ids[0]
+            print("\n=== Queue Status ===")
+            print(f"Added to queue with ID: {entry_ids[0]}")
     
         return result
     except Exception as e:
