@@ -121,7 +121,6 @@ def add_register_entry():
 def add_memo_entry():
     """Inserts a memo entry into the database using POST data and returns the insertion result."""
     data = request.json
-    breakpoint()
     response = MemoEntry.insert(data)
     return jsonify(response)
 
