@@ -10,7 +10,7 @@ from flask_jwt_extended import JWTManager
 import base64
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
 from OCR.name_cache import NameMatchCache
-from API_Database import insert_individual, retrieve_all, retrieve_from_id
+from API_Database import insert_individual, retrieve_all, retrieve_from_id, search_entities
 from API_Database import edit_individual, delete_entry, retrieve_memo_entry
 from API_Database import update_register_entry, update_memo_entry
 from backup import backup
@@ -25,11 +25,14 @@ ocr_queue = OCRQueue()
 from utils import table_class_mapper
 load_dotenv()
 app = Flask(__name__)
+
 CORS(app)
+
 name_cache = NameMatchCache()
 app.config['JSON_SORT_KEYS'] = False
 app.config['JWT_SECRET_KEY'] = 'NHYd198vQNOBa9HrIAGEGNYrKHBegc9Z'
 jwt = JWTManager(app)
+
 BASE = '/api'
 
 @app.route(BASE + '/token', methods=['POST'])
@@ -273,5 +276,27 @@ def fix():
     """Executes fix routines for register entries and returns a status message."""
     update_register_entry.fix_problems()
     return {'status': 'okay'}
+
+@app.route(BASE + '/search', methods=['POST'])
+def search():
+    """Search for entities that match the provided search query."""
+    if request.method == 'POST':
+        data = request.json
+        
+        if 'table_name' not in data or 'search' not in data:
+            return jsonify({'status': 'error', 'message': 'Missing required parameters'}), 400
+            
+        table_name = data['table_name']
+        search_query = data['search']
+        
+        # Remove these keys so they don't interfere with additional filters
+        search_data = {k: v for k, v in data.items() if k not in ['table_name', 'search']}
+        
+        try:
+            results = search_entities.search_entities(table_name, search_query, **search_data)
+            return json.dumps(results, cls=CustomEncoder)
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
