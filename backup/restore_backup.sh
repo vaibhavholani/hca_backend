@@ -1,8 +1,8 @@
 #!/bin/bash
 
 DB_USER="postgres"
-DB_NAME="hca"
-BACKUP_FILE="/Users/vaibhavholani/Downloads/backup_18_Jan_2025.sql"
+DB_NAME="hca_v2"
+BACKUP_FILE="/Users/vaibhavholani/Downloads/final_backup.sql"
 
 psql -U "$DB_USER" -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME;"
 psql -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME;"
