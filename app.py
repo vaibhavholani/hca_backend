@@ -277,6 +277,12 @@ def fix():
     update_register_entry.fix_problems()
     return {'status': 'okay'}
 
+@app.route(BASE + '/v2/get_by_id/<string:table_name>/<int:id>')
+def get_id_v2(table_name: str, id: int):
+    """Fetches a record by ID from a specified table and returns the data in JSON format with proper datetime handling."""
+    data = retrieve_from_id.get_from_id(table_name, id)
+    return json.dumps(data, cls=CustomEncoder)
+
 @app.route(BASE + '/search', methods=['POST'])
 def search():
     """Search for entities that match the provided search query."""
