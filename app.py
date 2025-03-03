@@ -281,7 +281,10 @@ def fix():
 def get_id_v2(table_name: str, id: int):
     """Fetches a record by ID from a specified table and returns the data in JSON format with proper datetime handling."""
     data = retrieve_from_id.get_from_id(table_name, id)
-    return json.dumps(data, cls=CustomEncoder)
+    # Extract the first (and should be only) item from the result array
+    if data and len(data) > 0:
+        return json.dumps(data[0], cls=CustomEncoder)
+    return json.dumps({}, cls=CustomEncoder)  # Return empty object if no data found
 
 @app.route(BASE + '/search', methods=['POST'])
 def search():
