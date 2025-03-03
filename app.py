@@ -286,6 +286,129 @@ def get_id_v2(table_name: str, id: int):
         return json.dumps(data[0], cls=CustomEncoder)
     return json.dumps({}, cls=CustomEncoder)  # Return empty object if no data found
 
+@app.route(BASE + '/v2/get_register_entry/<int:id>')
+def get_register_entry_v2(id: int):
+    """Fetches a register entry with all related data including item entries."""
+    try:
+        # Get basic register entry data
+        register_entry_data = RegisterEntry.get_register_entry_by_id(id)
+        
+        # Get related item entries
+        try:
+            item_entries = ItemEntry.retrieve(register_entry_id=id)
+            if isinstance(item_entries, list):
+                register_entry_data['item_entries'] = [
+                    {
+                        'id': item.id,
+                        'item_id': item.item_id,
+                        'quantity': item.quantity,
+                        'rate': item.rate,
+                        'amount': item.quantity * item.rate
+                    }
+                    for item in item_entries
+                ]
+            else:
+                register_entry_data['item_entries'] = [
+                    {
+                        'id': item_entries.id,
+                        'item_id': item_entries.item_id,
+                        'quantity': item_entries.quantity,
+                        'rate': item_entries.rate,
+                        'amount': item_entries.quantity * item_entries.rate
+                    }
+                ]
+                
+            # Get item names
+            for item_entry in register_entry_data['item_entries']:
+                try:
+                    item = Item.retrieve_by_id(item_entry['item_id'])
+                    item_entry['item_name'] = item.name
+                except Exception as e:
+                    print(f"Error fetching item: {str(e)}")
+        except Exception as e:
+            print(f"Error fetching item entries: {str(e)}")
+            register_entry_data['item_entries'] = []
+        
+        # Get supplier and party names
+        try:
+            supplier = Supplier.retrieve_by_id(register_entry_data['supplier_id'])
+            register_entry_data['supplier_name'] = supplier.name
+        except Exception as e:
+            print(f"Error fetching supplier: {str(e)}")
+            
+        try:
+            party = Party.retrieve_by_id(register_entry_data['party_id'])
+            register_entry_data['party_name'] = party.name
+        except Exception as e:
+            print(f"Error fetching party: {str(e)}")
+        
+        # Get related memo bills
+        try:
+            memo_bills_table = Table('memo_bills')
+            memo_entry_table = Table('memo_entry')
+            
+            query = Query.from_(memo_bills_table)\
+                .left_join(memo_entry_table).on(memo_bills_table.memo_id == memo_entry_table.id)\
+                .select(
+                    memo_bills_table.id,
+                    memo_bills_table.memo_id,
+                    memo_bills_table.type,
+                    memo_bills_table.amount,
+                    memo_entry_table.memo_number,
+                    memo_entry_table.register_date
+                )\
+                .where(memo_bills_table.bill_id == id)
+            
+            sql = query.get_sql()
+            result = execute_query(sql)
+            
+            register_entry_data['memo_bills'] = result['result']
+        except Exception as e:
+            print(f"Error fetching memo bills: {str(e)}")
+            register_entry_data['memo_bills'] = []
+        
+        return json.dumps(register_entry_data, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_memo_entry/<int:id>')
+def get_memo_entry_v2(id: int):
+    """Fetches a memo entry with all related data including payments and memo bills."""
+    try:
+        # Get basic memo entry data
+        memo_entry_data = MemoEntry.get_memo_entry(id)
+        
+        # Get related register entries for memo bills
+        if 'memo_bills' in memo_entry_data:
+            for bill in memo_entry_data['memo_bills']:
+                if bill['bill_id'] is not None:
+                    try:
+                        register_entry = RegisterEntry.retrieve_by_id(bill['bill_id'])
+                        bill['register_entry'] = {
+                            'bill_number': register_entry.bill_number,
+                            'amount': register_entry.amount,
+                            'register_date': register_entry.register_date.strftime('%Y-%m-%d')
+                        }
+                    except Exception as e:
+                        print(f"Error fetching register entry: {str(e)}")
+        
+        # Get supplier and party names
+        try:
+            supplier = Supplier.retrieve_by_id(memo_entry_data['supplier_id'])
+            memo_entry_data['supplier_name'] = supplier.name
+        except Exception as e:
+            print(f"Error fetching supplier: {str(e)}")
+            
+        try:
+            party = Party.retrieve_by_id(memo_entry_data['party_id'])
+            memo_entry_data['party_name'] = party.name
+        except Exception as e:
+            print(f"Error fetching party: {str(e)}")
+        
+        return json.dumps(memo_entry_data, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route(BASE + '/search', methods=['POST'])
 def search():
     """Search for entities that match the provided search query."""

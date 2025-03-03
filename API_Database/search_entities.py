@@ -20,9 +20,10 @@ def search_entities(table_name: str, search_query: str, **kwargs):
         'supplier': ['name', 'address', 'phone_number'],
         'party': ['name', 'address', 'phone_number'],
         'bank': ['name', 'address', 'phone_number'],
-        # Register Entry and Memo Entry have limited functionality for now
-        'register_entry': ['bill_number'],
-        'memo_entry': ['memo_number'],
+        # Expanded fields for Register Entry
+        'register_entry': ['bill_number', 'supplier_id', 'party_id', 'amount', 'status'],
+        # Expanded fields for Memo Entry
+        'memo_entry': ['memo_number', 'supplier_id', 'party_id', 'amount', 'mode'],
     }
     
     fields = searchable_fields.get(table_name, ['name'])
@@ -30,17 +31,44 @@ def search_entities(table_name: str, search_query: str, **kwargs):
     # Create table reference
     entity_table = Table(table_name)
     
-    # Start building the query
-    query = Query.from_(entity_table).select('*')
+    # For register_entry and memo_entry, we need to join with supplier and party
+    if table_name in ['register_entry', 'memo_entry']:
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        query = Query.from_(entity_table)\
+            .left_join(supplier_table).on(entity_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(entity_table.party_id == party_table.id)\
+            .select(
+                entity_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+    else:
+        # Start building the query for other entities
+        query = Query.from_(entity_table).select('*')
     
     # Build search criteria
     search_criteria = None
     for field in fields:
         # Handle numeric fields differently
-        if field in ['bill_number', 'memo_number', 'order_form_number', 'quantity', 'rate']:
+        if field in ['bill_number', 'memo_number', 'order_form_number', 'quantity', 'rate', 'amount']:
             # Only apply numeric search if the search query is a number
             if search_query.isdigit():
-                criterion = entity_table[field] == int(search_query)
+                # For supplier_id and party_id, search in both the ID and the joined name
+                if field in ['supplier_id', 'party_id'] and table_name in ['register_entry', 'memo_entry']:
+                    supplier_table = Table('supplier')
+                    party_table = Table('party')
+                    
+                    if field == 'supplier_id':
+                        criterion = (entity_table[field] == int(search_query)) | \
+                                   (supplier_table.name.ilike(f'%{search_query}%'))
+                    else:  # party_id
+                        criterion = (entity_table[field] == int(search_query)) | \
+                                   (party_table.name.ilike(f'%{search_query}%'))
+                else:
+                    criterion = entity_table[field] == int(search_query)
+                
                 if search_criteria is None:
                     search_criteria = criterion
                 else:
