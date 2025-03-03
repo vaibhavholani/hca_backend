@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import JWTManager
 import base64
+from pypika import Query, Table
+from psql import execute_query
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
 from OCR.name_cache import NameMatchCache
 from API_Database import insert_individual, retrieve_all, retrieve_from_id, search_entities
@@ -291,7 +293,8 @@ def get_register_entry_v2(id: int):
     """Fetches a register entry with all related data including item entries."""
     try:
         # Get basic register entry data
-        register_entry_data = RegisterEntry.get_register_entry_by_id(id)
+        register_entry = RegisterEntry.retrieve_by_id(id)
+        register_entry_data = register_entry.__dict__ if register_entry else {}
         
         # Get related item entries
         try:
