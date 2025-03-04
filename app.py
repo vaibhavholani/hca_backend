@@ -358,7 +358,11 @@ def get_register_entry_v2(id: int):
                     memo_bills_table.type,
                     memo_bills_table.amount,
                     memo_entry_table.memo_number,
-                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date')
+                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'),
+                    memo_entry_table.status.as_('memo_status'),
+                    memo_entry_table.gr_amount.as_('memo_gr_amount'),
+                    memo_entry_table.deduction.as_('memo_deduction'),
+                    memo_entry_table.partial_amount.as_('memo_partial_amount')
                 )\
                 .where(memo_bills_table.bill_id == id)
             
