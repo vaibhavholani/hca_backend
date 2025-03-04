@@ -433,5 +433,113 @@ def search():
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route(BASE + '/v2/get_all_memo_entries', methods=['GET'])
+def get_all_memo_entries_with_names():
+    """Retrieves all memo entries with supplier and party names."""
+    try:
+        # Create table references
+        memo_entry_table = Table('memo_entry')
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        # Build query with JOINs
+        query = Query.from_(memo_entry_table)\
+            .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+            .select(
+                memo_entry_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+        
+        sql = query.get_sql()
+        result = execute_query(sql)
+        
+        if result['status'] == 'error':
+            return jsonify({'status': 'error', 'message': 'Failed to fetch memo entries'}), 500
+            
+        memo_entries = result['result']
+        
+        # Enhance each entry with memo bills and payment info
+        for entry in memo_entries:
+            # Get memo bills
+            memo_bills_table = Table('memo_bills')
+            bills_query = Query.from_(memo_bills_table)\
+                .select('*')\
+                .where(memo_bills_table.memo_id == entry['id'])
+            
+            bills_result = execute_query(bills_query.get_sql())
+            entry['memo_bills'] = bills_result['result'] if bills_result['status'] == 'okay' else []
+            
+            # Get payment info
+            memo_payments_table = Table('memo_payments')
+            bank_table = Table('bank')
+            payments_query = Query.from_(memo_payments_table)\
+                .left_join(bank_table).on(memo_payments_table.bank_id == bank_table.id)\
+                .select(
+                    memo_payments_table.bank_id,
+                    bank_table.name.as_('bank_name'),
+                    memo_payments_table.cheque_number
+                )\
+                .where(memo_payments_table.memo_id == entry['id'])
+            
+            payments_result = execute_query(payments_query.get_sql())
+            entry['payment'] = payments_result['result'] if payments_result['status'] == 'okay' else []
+        
+        return json.dumps(memo_entries, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
+def get_all_register_entries_with_names():
+    """Retrieves all register entries with supplier and party names."""
+    try:
+        # Create table references
+        register_entry_table = Table('register_entry')
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        # Build query with JOINs
+        query = Query.from_(register_entry_table)\
+            .left_join(supplier_table).on(register_entry_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(register_entry_table.party_id == party_table.id)\
+            .select(
+                register_entry_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+        
+        sql = query.get_sql()
+        result = execute_query(sql)
+        
+        if result['status'] == 'error':
+            return jsonify({'status': 'error', 'message': 'Failed to fetch register entries'}), 500
+            
+        register_entries = result['result']
+        
+        # Enhance each entry with memo bills info
+        for entry in register_entries:
+            # Get memo bills
+            memo_bills_table = Table('memo_bills')
+            memo_entry_table = Table('memo_entry')
+            bills_query = Query.from_(memo_bills_table)\
+                .left_join(memo_entry_table).on(memo_bills_table.memo_id == memo_entry_table.id)\
+                .select(
+                    memo_bills_table.id,
+                    memo_bills_table.memo_id,
+                    memo_bills_table.type,
+                    memo_bills_table.amount,
+                    memo_entry_table.memo_number,
+                    memo_entry_table.register_date
+                )\
+                .where(memo_bills_table.bill_id == entry['id'])
+            
+            bills_result = execute_query(bills_query.get_sql())
+            entry['memo_bills'] = bills_result['result'] if bills_result['status'] == 'okay' else []
+        
+        return json.dumps(register_entries, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
