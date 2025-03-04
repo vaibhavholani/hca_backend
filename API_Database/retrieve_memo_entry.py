@@ -158,3 +158,59 @@ def generate_memo_total(supplier_ids: Union[int, List[int]], party_ids: Union[in
     if isinstance(end_date, str):
         end_date = parse_date(end_date)
     return get_total_memo_entity_bulk(supplier_ids, party_ids, start_date, end_date, memo_type, supplier_all=supplier_all, party_all=party_all)
+
+def get_all_memo_entries_with_names() -> Dict:
+    """Retrieves all memo entries with supplier and party names."""
+    try:
+        # Create table references
+        memo_entry_table = Table('memo_entry')
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        # Build query with JOINs
+        query = Query.from_(memo_entry_table)\
+            .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+            .select(
+                memo_entry_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+        
+        sql = query.get_sql()
+        result = execute_query(sql)
+        
+        if result['status'] == 'error':
+            return {'status': 'error', 'message': 'Failed to fetch memo entries'}
+            
+        memo_entries = result['result']
+        
+        # Enhance each entry with memo bills and payment info
+        for entry in memo_entries:
+            # Get memo bills
+            memo_bills_table = Table('memo_bills')
+            bills_query = Query.from_(memo_bills_table)\
+                .select('*')\
+                .where(memo_bills_table.memo_id == entry['id'])
+            
+            bills_result = execute_query(bills_query.get_sql())
+            entry['memo_bills'] = bills_result['result'] if bills_result['status'] == 'okay' else []
+            
+            # Get payment info
+            memo_payments_table = Table('memo_payments')
+            bank_table = Table('bank')
+            payments_query = Query.from_(memo_payments_table)\
+                .left_join(bank_table).on(memo_payments_table.bank_id == bank_table.id)\
+                .select(
+                    memo_payments_table.bank_id,
+                    bank_table.name.as_('bank_name'),
+                    memo_payments_table.cheque_number
+                )\
+                .where(memo_payments_table.memo_id == entry['id'])
+            
+            payments_result = execute_query(payments_query.get_sql())
+            entry['payment'] = payments_result['result'] if payments_result['status'] == 'okay' else []
+        
+        return {'status': 'okay', 'result': memo_entries}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
