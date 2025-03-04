@@ -358,7 +358,7 @@ def get_register_entry_v2(id: int):
                     memo_bills_table.type,
                     memo_bills_table.amount,
                     memo_entry_table.memo_number,
-                    memo_entry_table.register_date
+                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date')
                 )\
                 .where(memo_bills_table.bill_id == id)
             
