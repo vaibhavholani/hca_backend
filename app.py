@@ -292,9 +292,8 @@ def get_id_v2(table_name: str, id: int):
 def get_register_entry_v2(id: int):
     """Fetches a register entry with all related data including item entries."""
     try:
-        # Get basic register entry data
-        register_entry = RegisterEntry.retrieve_by_id(id)
-        register_entry_data = register_entry.__dict__ if register_entry else {}
+        # Get basic register entry data from database
+        register_entry_data = retrieve_register_entry.get_register_entry_by_id(id)
         
         # Get related item entries
         try:
@@ -331,21 +330,8 @@ def get_register_entry_v2(id: int):
         except Exception as e:
             print(f"Error fetching item entries: {str(e)}")
             register_entry_data['item_entries'] = []
-        
-        # Get supplier and party names
-        try:
-            supplier = Supplier.retrieve_by_id(register_entry_data['supplier_id'])
-            register_entry_data['supplier_name'] = supplier.name
-        except Exception as e:
-            print(f"Error fetching supplier: {str(e)}")
             
-        try:
-            party = Party.retrieve_by_id(register_entry_data['party_id'])
-            register_entry_data['party_name'] = party.name
-        except Exception as e:
-            print(f"Error fetching party: {str(e)}")
-        
-        # Get related memo bills
+        # Get memo bills
         try:
             memo_bills_table = Table('memo_bills')
             memo_entry_table = Table('memo_entry')
@@ -358,11 +344,7 @@ def get_register_entry_v2(id: int):
                     memo_bills_table.type,
                     memo_bills_table.amount,
                     memo_entry_table.memo_number,
-                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'),
-                    memo_entry_table.status.as_('memo_status'),
-                    memo_entry_table.gr_amount.as_('memo_gr_amount'),
-                    memo_entry_table.deduction.as_('memo_deduction'),
-                    memo_entry_table.partial_amount.as_('memo_partial_amount')
+                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date')
                 )\
                 .where(memo_bills_table.bill_id == id)
             
@@ -374,15 +356,15 @@ def get_register_entry_v2(id: int):
             print(f"Error fetching memo bills: {str(e)}")
             register_entry_data['memo_bills'] = []
         
-        return json.dumps(register_entry_data, cls=CustomEncoder)
+        return jsonify(register_entry_data)
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route(BASE + '/v2/get_memo_entry/<int:id>')
 def get_memo_entry_v2(id: int):
     """Fetches a memo entry with all related data including payments and memo bills."""
     try:
-        # Get basic memo entry data
+        # Get memo entry data with all related information
         memo_entry_data = MemoEntry.get_memo_entry(id)
         
         # Get related register entries for memo bills
@@ -398,19 +380,6 @@ def get_memo_entry_v2(id: int):
                         }
                     except Exception as e:
                         print(f"Error fetching register entry: {str(e)}")
-        
-        # Get supplier and party names
-        try:
-            supplier = Supplier.retrieve_by_id(memo_entry_data['supplier_id'])
-            memo_entry_data['supplier_name'] = supplier.name
-        except Exception as e:
-            print(f"Error fetching supplier: {str(e)}")
-            
-        try:
-            party = Party.retrieve_by_id(memo_entry_data['party_id'])
-            memo_entry_data['party_name'] = party.name
-        except Exception as e:
-            print(f"Error fetching party: {str(e)}")
         
         return json.dumps(memo_entry_data, cls=CustomEncoder)
     except Exception as e:

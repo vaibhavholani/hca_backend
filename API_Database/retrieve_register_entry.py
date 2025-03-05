@@ -25,7 +25,27 @@ def get_all_register_entries(**kwargs):
 def get_register_entry_by_id(id: int) -> Dict:
     """Retrieves a register entry by its ID and returns its details as a dictionary; raises DataError if not found or if duplicates exist."""
     register_entry_table = Table('register_entry')
-    select_query = Query.from_(register_entry_table).select(register_entry_table.supplier_id, register_entry_table.party_id, register_entry_table.bill_number, fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'), fn.Cast(register_entry_table.amount, 'integer').as_('amount'), register_entry_table.partial_amount, register_entry_table.status, register_entry_table.deduction, register_entry_table.gr_amount).where(register_entry_table.id == id)
+    supplier_table = Table('supplier')
+    party_table = Table('party')
+    
+    select_query = Query.from_(register_entry_table)\
+        .left_join(supplier_table).on(register_entry_table.supplier_id == supplier_table.id)\
+        .left_join(party_table).on(register_entry_table.party_id == party_table.id)\
+        .select(
+            register_entry_table.supplier_id,
+            register_entry_table.party_id,
+            register_entry_table.bill_number,
+            fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'),
+            fn.Cast(register_entry_table.amount, 'integer').as_('amount'),
+            register_entry_table.partial_amount,
+            register_entry_table.status,
+            register_entry_table.deduction,
+            register_entry_table.gr_amount,
+            supplier_table.name.as_('supplier_name'),
+            party_table.name.as_('party_name')
+        )\
+        .where(register_entry_table.id == id)
+    
     sql = select_query.get_sql()
     data = execute_query(sql)
     if len(data['result']) == 0:

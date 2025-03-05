@@ -76,29 +76,96 @@ def get_memo_entry(memo_id: int) -> Dict:
     bank_table = Table('bank')
     register_entry_table = Table('register_entry')
     part_payments_table = Table('part_payments')
-    select_query = Query.from_(memo_entry_table).select('*').where(memo_entry_table.id == memo_id)
+    supplier_table = Table('supplier')
+    party_table = Table('party')
+    
+    # Get memo entry data with supplier and party names
+    select_query = Query.from_(memo_entry_table)\
+        .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
+        .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+        .select(
+            memo_entry_table.star,
+            supplier_table.name.as_('supplier_name'),
+            party_table.name.as_('party_name')
+        )\
+        .where(memo_entry_table.id == memo_id)
+    
     memo_data = execute_query(select_query.get_sql())['result'][0]
-    select_query = Query.from_(memo_payments_table).join(bank_table).on(memo_payments_table.bank_id == bank_table.id).select(memo_payments_table.bank_id, bank_table.name.as_('bank_name'), memo_payments_table.cheque_number).where(memo_payments_table.memo_id == memo_id)
+    
+    # Get payment data
+    select_query = Query.from_(memo_payments_table)\
+        .join(bank_table).on(memo_payments_table.bank_id == bank_table.id)\
+        .select(
+            memo_payments_table.bank_id,
+            bank_table.name.as_('bank_name'),
+            memo_payments_table.cheque_number
+        )\
+        .where(memo_payments_table.memo_id == memo_id)
+    
     payments_data = execute_query(select_query.get_sql())['result']
-    payments = [{'bank_id': p['bank_id'], 'bank_name': p['bank_name'], 'cheque_number': p['cheque_number']} for p in payments_data]
-    select_query = Query.from_(memo_bills_table).left_join(register_entry_table).on(memo_bills_table.bill_id == register_entry_table.id).select(memo_bills_table.id, memo_bills_table.bill_id, register_entry_table.bill_number, memo_bills_table.type, memo_bills_table.amount).where(memo_bills_table.memo_id == memo_id).orderby(register_entry_table.bill_number)
+    payments = [
+        {
+            'bank_id': p['bank_id'],
+            'bank_name': p['bank_name'],
+            'cheque_number': p['cheque_number']
+        }
+        for p in payments_data
+    ]
+    
+    # Get memo bills data
+    select_query = Query.from_(memo_bills_table)\
+        .left_join(register_entry_table).on(memo_bills_table.bill_id == register_entry_table.id)\
+        .select(
+            memo_bills_table.id,
+            memo_bills_table.bill_id,
+            register_entry_table.bill_number,
+            memo_bills_table.type,
+            memo_bills_table.amount
+        )\
+        .where(memo_bills_table.memo_id == memo_id)\
+        .orderby(register_entry_table.bill_number)
+    
     bills_data = execute_query(select_query.get_sql())['result']
     for bill in bills_data:
         if bill['bill_number'] is None:
             bill['bill_number'] = -1
+    
+    # Determine mode
     mode = 'Full'
     for bill in bills_data:
         if bill['type'] == 'PR':
             mode = 'Part'
             break
+    
+    # Get part payments if full mode
     part_payments = []
     if mode == 'Full':
-        select_query = Query.from_(part_payments_table).select('*').where(part_payments_table.use_memo_id == memo_id)
+        select_query = Query.from_(part_payments_table)\
+            .select('*')\
+            .where(part_payments_table.use_memo_id == memo_id)
         part_payments_data = execute_query(select_query.get_sql())['result']
         part_payments = [p['memo_id'] for p in part_payments_data]
-    result = {'id': memo_data['id'], 'memo_number': memo_data['memo_number'], 'supplier_id': memo_data['supplier_id'], 'party_id': memo_data['party_id'], 'amount': memo_data['amount'], 'gr_amount': memo_data.get('gr_amount', 0), 'deduction': memo_data.get('deduction', 0), 'register_date': sql_date(memo_data['register_date']), 'mode': mode, 'memo_bills': bills_data, 'payment': payments}
+    
+    # Construct result
+    result = {
+        'id': memo_data['id'],
+        'memo_number': memo_data['memo_number'],
+        'supplier_id': memo_data['supplier_id'],
+        'party_id': memo_data['party_id'],
+        'supplier_name': memo_data['supplier_name'],
+        'party_name': memo_data['party_name'],
+        'amount': memo_data['amount'],
+        'gr_amount': memo_data.get('gr_amount', 0),
+        'deduction': memo_data.get('deduction', 0),
+        'register_date': sql_date(memo_data['register_date']),
+        'mode': mode,
+        'memo_bills': bills_data,
+        'payment': payments
+    }
+    
     if part_payments:
         result['selected_part'] = part_payments
+    
     return result
 
 def get_all_memo_entries(**kwargs):
