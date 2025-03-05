@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import JWTManager
 import base64
-from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry
+from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry, retrieve_memo_dalali, update_memo_dalali
 from OCR.name_cache import NameMatchCache
 from API_Database import insert_individual, retrieve_all, retrieve_from_id, search_entities
 from API_Database import edit_individual, delete_entry, retrieve_memo_entry
@@ -276,6 +276,44 @@ def fix():
     """Executes fix routines for register entries and returns a status message."""
     update_register_entry.fix_problems()
     return {'status': 'okay'}
+
+@app.route(BASE + '/memo_entries_with_dalali', methods=['GET'])
+def get_memo_entries_with_dalali():
+    """Retrieves all memo entries with dalali payment information and returns them in JSON format."""
+    try:
+        print("I am here")
+        data = retrieve_memo_dalali.get_all_memo_entries_with_dalali()
+        print(data)
+        return json.dumps(data, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/update_memo_dalali', methods=['POST'])
+def update_memo_dalali_payment():
+    """Updates dalali payment information for a memo entry."""
+    if request.method == 'POST':
+        data = request.json
+        
+        if 'memo_id' not in data:
+            return jsonify({'status': 'error', 'message': 'Missing memo_id parameter'}), 400
+        
+        memo_id = data['memo_id']
+        
+        # If a specific field is being updated
+        if 'field' in data and 'value' in data:
+            field = data['field']
+            value = data['value']
+            result = update_memo_dalali.update_dalali_payment_field(memo_id, field, value)
+        else:
+            # Full update
+            is_paid = data.get('is_paid', False)
+            paid_amount = data.get('paid_amount', 0)
+            remark = data.get('remark', '')
+            result = update_memo_dalali.create_or_update_dalali_payment(memo_id, is_paid, paid_amount, remark)
+        
+        return jsonify(result)
+    
+    return jsonify({'status': 'error', 'message': 'Only POST requests are allowed'}), 405
 
 @app.route(BASE + '/search', methods=['POST'])
 def search():
