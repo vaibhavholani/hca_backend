@@ -43,9 +43,13 @@ def get_memo_dalali_payment(memo_id: int) -> Optional[Dict]:
     
     return response['result'][0]
 
-def get_all_memo_entries_with_dalali() -> List[Dict]:
+def get_all_memo_entries_with_dalali(start_date: str = None, end_date: str = None) -> List[Dict]:
     """
-    Get all memo entries with dalali payment information
+    Get all memo entries with dalali payment information, optionally filtered by date range
+    
+    Args:
+        start_date: Optional start date for filtering (format: 'YYYY-MM-DD')
+        end_date: Optional end date for filtering (format: 'YYYY-MM-DD')
     
     Returns:
         List of dictionaries containing memo entries with dalali payment information
@@ -75,10 +79,17 @@ def get_all_memo_entries_with_dalali() -> List[Dict]:
             dalali_payments.remark,
             dalali_payments.last_update.as_('dalali_last_update')
         )
-        .orderby(memo_entry.register_date, order=Order.desc)
     )
     
-
+    # Add date range filters if provided
+    if start_date:
+        query = query.where(memo_entry.register_date >= start_date)
+    if end_date:
+        query = query.where(memo_entry.register_date <= end_date)
+    
+    # Add ordering
+    query = query.orderby(memo_entry.register_date, order=Order.desc)
+    
     sql = query.get_sql()
 
     response = execute_query(sql)

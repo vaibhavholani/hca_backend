@@ -279,11 +279,14 @@ def fix():
 
 @app.route(BASE + '/memo_entries_with_dalali', methods=['GET'])
 def get_memo_entries_with_dalali():
-    """Retrieves all memo entries with dalali payment information and returns them in JSON format."""
+    """Retrieves memo entries with dalali payment information, optionally filtered by date range."""
     try:
-        print("I am here")
-        data = retrieve_memo_dalali.get_all_memo_entries_with_dalali()
-        print(data)
+        # Get date range parameters from query string
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Get data with optional date filtering
+        data = retrieve_memo_dalali.get_all_memo_entries_with_dalali(start_date, end_date)
         return json.dumps(data, cls=CustomEncoder)
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
