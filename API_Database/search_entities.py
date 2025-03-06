@@ -8,7 +8,8 @@ def search_entities(table_name: str, search_query: str, **kwargs):
     Args:
         table_name: The name of the table to search in
         search_query: The search query string
-        **kwargs: Additional filters to apply
+        **kwargs: Additional filters to apply. Special parameters:
+            - field_filters: List of field filters with entityType, field, operator, and value
         
     Returns:
         List of entities that match the search criteria
@@ -19,9 +20,10 @@ def search_entities(table_name: str, search_query: str, **kwargs):
         'supplier': ['name', 'address', 'phone_number'],
         'party': ['name', 'address', 'phone_number'],
         'bank': ['name', 'address', 'phone_number'],
-        # Register Entry and Memo Entry have limited functionality for now
-        'register_entry': ['bill_number'],
-        'memo_entry': ['memo_number'],
+        # Expanded fields for Register Entry
+        'register_entry': ['bill_number', 'supplier_id', 'party_id', 'amount', 'status'],
+        # Expanded fields for Memo Entry
+        'memo_entry': ['memo_number', 'supplier_id', 'party_id', 'amount', 'mode'],
     }
     
     fields = searchable_fields.get(table_name, ['name'])
@@ -29,17 +31,44 @@ def search_entities(table_name: str, search_query: str, **kwargs):
     # Create table reference
     entity_table = Table(table_name)
     
-    # Start building the query
-    query = Query.from_(entity_table).select('*')
+    # For register_entry and memo_entry, we need to join with supplier and party
+    if table_name in ['register_entry', 'memo_entry']:
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        query = Query.from_(entity_table)\
+            .left_join(supplier_table).on(entity_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(entity_table.party_id == party_table.id)\
+            .select(
+                entity_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+    else:
+        # Start building the query for other entities
+        query = Query.from_(entity_table).select('*')
     
     # Build search criteria
     search_criteria = None
     for field in fields:
         # Handle numeric fields differently
-        if field in ['bill_number', 'memo_number', 'order_form_number', 'quantity', 'rate']:
+        if field in ['bill_number', 'memo_number', 'order_form_number', 'quantity', 'rate', 'amount']:
             # Only apply numeric search if the search query is a number
             if search_query.isdigit():
-                criterion = entity_table[field] == int(search_query)
+                # For supplier_id and party_id, search in both the ID and the joined name
+                if field in ['supplier_id', 'party_id'] and table_name in ['register_entry', 'memo_entry']:
+                    supplier_table = Table('supplier')
+                    party_table = Table('party')
+                    
+                    if field == 'supplier_id':
+                        criterion = (entity_table[field] == int(search_query)) | \
+                                   (supplier_table.name.ilike(f'%{search_query}%'))
+                    else:  # party_id
+                        criterion = (entity_table[field] == int(search_query)) | \
+                                   (party_table.name.ilike(f'%{search_query}%'))
+                else:
+                    criterion = entity_table[field] == int(search_query)
+                
                 if search_criteria is None:
                     search_criteria = criterion
                 else:
@@ -55,6 +84,47 @@ def search_entities(table_name: str, search_query: str, **kwargs):
     # Add search criteria to query
     if search_criteria:
         query = query.where(search_criteria)
+    
+    # Extract special parameters
+    field_filters = kwargs.pop('field_filters', None)
+    
+    # Process field filters if present
+    if field_filters:
+        try:
+            # Only process filters for the current entity type
+            entity_filters = [f for f in field_filters if f.get('entityType') == table_name]
+            
+            for filter_item in entity_filters:
+                field = filter_item.get('field')
+                operator = filter_item.get('operator')
+                value = filter_item.get('value')
+                
+                if field and operator and value is not None:
+                    # Apply the appropriate operator
+                    if operator == 'equals':
+                        query = query.where(entity_table[field] == value)
+                    elif operator == 'notEquals':
+                        query = query.where(entity_table[field] != value)
+                    elif operator == 'contains':
+                        query = query.where(entity_table[field].ilike(f'%{value}%'))
+                    elif operator == 'notContains':
+                        query = query.where(entity_table[field].not_ilike(f'%{value}%'))
+                    elif operator == 'startsWith':
+                        query = query.where(entity_table[field].ilike(f'{value}%'))
+                    elif operator == 'endsWith':
+                        query = query.where(entity_table[field].ilike(f'%{value}'))
+                    elif operator == 'greaterThan':
+                        query = query.where(entity_table[field] > value)
+                    elif operator == 'lessThan':
+                        query = query.where(entity_table[field] < value)
+                    elif operator == 'greaterThanOrEqual':
+                        query = query.where(entity_table[field] >= value)
+                    elif operator == 'lessThanOrEqual':
+                        query = query.where(entity_table[field] <= value)
+                    # Date operators would need date conversion logic
+        except Exception as e:
+            print(f"Error processing field filters: {str(e)}")
+            # Continue with the query even if field filters fail
     
     # Add any additional filters from kwargs
     for key, value in kwargs.items():

@@ -25,7 +25,27 @@ def get_all_register_entries(**kwargs):
 def get_register_entry_by_id(id: int) -> Dict:
     """Retrieves a register entry by its ID and returns its details as a dictionary; raises DataError if not found or if duplicates exist."""
     register_entry_table = Table('register_entry')
-    select_query = Query.from_(register_entry_table).select(register_entry_table.supplier_id, register_entry_table.party_id, register_entry_table.bill_number, fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'), fn.Cast(register_entry_table.amount, 'integer').as_('amount'), register_entry_table.partial_amount, register_entry_table.status, register_entry_table.deduction, register_entry_table.gr_amount).where(register_entry_table.id == id)
+    supplier_table = Table('supplier')
+    party_table = Table('party')
+    
+    select_query = Query.from_(register_entry_table)\
+        .left_join(supplier_table).on(register_entry_table.supplier_id == supplier_table.id)\
+        .left_join(party_table).on(register_entry_table.party_id == party_table.id)\
+        .select(
+            register_entry_table.supplier_id,
+            register_entry_table.party_id,
+            register_entry_table.bill_number,
+            fn.ToChar(register_entry_table.register_date, 'YYYY-MM-DD').as_('register_date'),
+            fn.Cast(register_entry_table.amount, 'integer').as_('amount'),
+            register_entry_table.partial_amount,
+            register_entry_table.status,
+            register_entry_table.deduction,
+            register_entry_table.gr_amount,
+            supplier_table.name.as_('supplier_name'),
+            party_table.name.as_('party_name')
+        )\
+        .where(register_entry_table.id == id)
+    
     sql = select_query.get_sql()
     data = execute_query(sql)
     if len(data['result']) == 0:
@@ -372,3 +392,53 @@ def generate_total(supplier_ids: Union[int, List[int]], party_ids: Union[int, Li
     if isinstance(party_ids, int):
         party_ids = [party_ids]
     return get_total_bill_entity_bulk(supplier_ids=supplier_ids, party_ids=party_ids, start_date=start_date, end_date=end_date, column_name=column_name, pending=pending, days=days, supplier_all=supplier_all, party_all=party_all)
+
+def get_all_register_entries_with_names() -> Dict:
+    """Retrieves all register entries with supplier and party names."""
+    try:
+        # Create table references
+        register_entry_table = Table('register_entry')
+        supplier_table = Table('supplier')
+        party_table = Table('party')
+        
+        # Build query with JOINs
+        query = Query.from_(register_entry_table)\
+            .left_join(supplier_table).on(register_entry_table.supplier_id == supplier_table.id)\
+            .left_join(party_table).on(register_entry_table.party_id == party_table.id)\
+            .select(
+                register_entry_table.star,
+                supplier_table.name.as_('supplier_name'),
+                party_table.name.as_('party_name')
+            )
+        
+        sql = query.get_sql()
+        result = execute_query(sql)
+        
+        if result['status'] == 'error':
+            return {'status': 'error', 'message': 'Failed to fetch register entries'}
+            
+        register_entries = result['result']
+        
+        # Enhance each entry with memo bills info
+        for entry in register_entries:
+            # Get memo bills
+            memo_bills_table = Table('memo_bills')
+            memo_entry_table = Table('memo_entry')
+            bills_query = Query.from_(memo_bills_table)\
+                .left_join(memo_entry_table).on(memo_bills_table.memo_id == memo_entry_table.id)\
+                .select(
+                    memo_bills_table.id,
+                    memo_bills_table.memo_id,
+                    memo_bills_table.type,
+                    memo_bills_table.amount,
+                    memo_entry_table.memo_number,
+                    memo_entry_table.register_date
+                )\
+                .where(memo_bills_table.bill_id == entry['id'])
+            
+            bills_result = execute_query(bills_query.get_sql())
+            entry['memo_bills'] = bills_result['result'] if bills_result['status'] == 'okay' else []
+        
+        return {'status': 'okay', 'result': register_entries}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}

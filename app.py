@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import JWTManager
 import base64
+from pypika import Query, Table
+from psql import execute_query
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry, retrieve_memo_dalali, update_memo_dalali
 from OCR.name_cache import NameMatchCache
 from API_Database import insert_individual, retrieve_all, retrieve_from_id, search_entities
@@ -277,6 +279,112 @@ def fix():
     update_register_entry.fix_problems()
     return {'status': 'okay'}
 
+@app.route(BASE + '/v2/get_by_id/<string:table_name>/<int:id>')
+def get_id_v2(table_name: str, id: int):
+    """Fetches a record by ID from a specified table and returns the data in JSON format with proper datetime handling."""
+    data = retrieve_from_id.get_from_id(table_name, id)
+    # Extract the first (and should be only) item from the result array
+    if data and len(data) > 0:
+        return json.dumps(data[0], cls=CustomEncoder)
+    return json.dumps({}, cls=CustomEncoder)  # Return empty object if no data found
+
+@app.route(BASE + '/v2/get_register_entry/<int:id>')
+def get_register_entry_v2(id: int):
+    """Fetches a register entry with all related data including item entries."""
+    try:
+        # Get basic register entry data from database
+        register_entry_data = retrieve_register_entry.get_register_entry_by_id(id)
+        
+        # Get related item entries
+        try:
+            item_entries = ItemEntry.retrieve(register_entry_id=id)
+            if isinstance(item_entries, list):
+                register_entry_data['item_entries'] = [
+                    {
+                        'id': item.id,
+                        'item_id': item.item_id,
+                        'quantity': item.quantity,
+                        'rate': item.rate,
+                        'amount': item.quantity * item.rate
+                    }
+                    for item in item_entries
+                ]
+            else:
+                register_entry_data['item_entries'] = [
+                    {
+                        'id': item_entries.id,
+                        'item_id': item_entries.item_id,
+                        'quantity': item_entries.quantity,
+                        'rate': item_entries.rate,
+                        'amount': item_entries.quantity * item_entries.rate
+                    }
+                ]
+                
+            # Get item names
+            for item_entry in register_entry_data['item_entries']:
+                try:
+                    item = Item.retrieve_by_id(item_entry['item_id'])
+                    item_entry['item_name'] = item.name
+                except Exception as e:
+                    print(f"Error fetching item: {str(e)}")
+        except Exception as e:
+            print(f"Error fetching item entries: {str(e)}")
+            register_entry_data['item_entries'] = []
+            
+        # Get memo bills
+        try:
+            memo_bills_table = Table('memo_bills')
+            memo_entry_table = Table('memo_entry')
+            
+            query = Query.from_(memo_bills_table)\
+                .left_join(memo_entry_table).on(memo_bills_table.memo_id == memo_entry_table.id)\
+                .select(
+                    memo_bills_table.id,
+                    memo_bills_table.memo_id,
+                    memo_bills_table.type,
+                    memo_bills_table.amount,
+                    memo_entry_table.memo_number,
+                    fn.ToChar(memo_entry_table.register_date, 'YYYY-MM-DD').as_('register_date')
+                )\
+                .where(memo_bills_table.bill_id == id)
+            
+            sql = query.get_sql()
+            result = execute_query(sql)
+            
+            register_entry_data['memo_bills'] = result['result']
+        except Exception as e:
+            print(f"Error fetching memo bills: {str(e)}")
+            register_entry_data['memo_bills'] = []
+        
+        return jsonify(register_entry_data)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+@app.route(BASE + '/v2/get_memo_entry/<int:id>')
+def get_memo_entry_v2(id: int):
+    """Fetches a memo entry with all related data including payments and memo bills."""
+    try:
+        # Get memo entry data with all related information
+        memo_entry_data = MemoEntry.get_memo_entry(id)
+        
+        # Get related register entries for memo bills
+        if 'memo_bills' in memo_entry_data:
+            for bill in memo_entry_data['memo_bills']:
+                if bill['bill_id'] is not None:
+                    try:
+                        register_entry = RegisterEntry.retrieve_by_id(bill['bill_id'])
+                        bill['register_entry'] = {
+                            'bill_number': register_entry.bill_number,
+                            'amount': register_entry.amount,
+                            'register_date': register_entry.register_date.strftime('%Y-%m-%d')
+                        }
+                    except Exception as e:
+                        print(f"Error fetching register entry: {str(e)}")
+        
+        return json.dumps(memo_entry_data, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route(BASE + '/memo_entries_with_dalali', methods=['GET'])
 def get_memo_entries_with_dalali():
     """Retrieves memo entries with dalali payment information, optionally filtered by date range."""
@@ -338,6 +446,50 @@ def search():
             return json.dumps(results, cls=CustomEncoder)
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_all_memo_entries', methods=['GET'])
+def get_all_memo_entries_with_names():
+    """Retrieves all memo entries with supplier and party names."""
+    try:
+        result = retrieve_memo_entry.get_all_memo_entries_with_names()
+        if result['status'] == 'error':
+            return jsonify(result), 500
+        return json.dumps(result['result'], cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
+def get_all_register_entries_with_names():
+    """Retrieves all register entries with supplier and party names."""
+    try:
+        result = retrieve_register_entry.get_all_register_entries_with_names()
+        if result['status'] == 'error':
+            return jsonify(result), 500
+        return json.dumps(result['result'], cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_all_memo_entries', methods=['GET'])
+def get_all_memo_entries_with_names():
+    """Retrieves all memo entries with supplier and party names."""
+    try:
+        result = retrieve_memo_entry.get_all_memo_entries_with_names()
+        if result['status'] == 'error':
+            return jsonify(result), 500
+        return json.dumps(result['result'], cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
+def get_all_register_entries_with_names():
+    """Retrieves all register entries with supplier and party names."""
+    try:
+        result = retrieve_register_entry.get_all_register_entries_with_names()
+        if result['status'] == 'error':
+            return jsonify(result), 500
+        return json.dumps(result['result'], cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
