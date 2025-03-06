@@ -21,9 +21,9 @@ def search_entities(table_name: str, search_query: str, **kwargs):
         'party': ['name', 'address', 'phone_number'],
         'bank': ['name', 'address', 'phone_number'],
         # Expanded fields for Register Entry
-        'register_entry': ['bill_number', 'supplier_id', 'party_id', 'amount', 'status'],
+        'register_entry': ['bill_number', 'supplier_id', 'party_id', 'amount', 'status', 'supplier_name', 'party_name'],
         # Expanded fields for Memo Entry
-        'memo_entry': ['memo_number', 'supplier_id', 'party_id', 'amount', 'mode'],
+        'memo_entry': ['memo_number', 'supplier_id', 'party_id', 'amount', 'supplier_name', 'party_name'],
     }
     
     fields = searchable_fields.get(table_name, ['name'])
@@ -55,24 +55,45 @@ def search_entities(table_name: str, search_query: str, **kwargs):
         if field in ['bill_number', 'memo_number', 'order_form_number', 'quantity', 'rate', 'amount']:
             # Only apply numeric search if the search query is a number
             if search_query.isdigit():
-                # For supplier_id and party_id, search in both the ID and the joined name
-                if field in ['supplier_id', 'party_id'] and table_name in ['register_entry', 'memo_entry']:
-                    supplier_table = Table('supplier')
-                    party_table = Table('party')
-                    
-                    if field == 'supplier_id':
-                        criterion = (entity_table[field] == int(search_query)) | \
-                                   (supplier_table.name.ilike(f'%{search_query}%'))
-                    else:  # party_id
-                        criterion = (entity_table[field] == int(search_query)) | \
-                                   (party_table.name.ilike(f'%{search_query}%'))
-                else:
-                    criterion = entity_table[field] == int(search_query)
+                criterion = entity_table[field] == int(search_query)
                 
                 if search_criteria is None:
                     search_criteria = criterion
                 else:
                     search_criteria = search_criteria | criterion
+        # Handle supplier_id and party_id fields specially
+        elif field in ['supplier_id', 'party_id'] and table_name in ['register_entry', 'memo_entry']:
+            if search_query.isdigit():
+                # If it's a number, search by ID
+                criterion = entity_table[field] == int(search_query)
+            else:
+                # If it's text, don't search by ID (will be handled by supplier_name/party_name)
+                continue
+                
+            if search_criteria is None:
+                search_criteria = criterion
+            else:
+                search_criteria = search_criteria | criterion
+        # Handle supplier_name and party_name fields
+        elif field in ['supplier_name', 'party_name'] and table_name in ['register_entry', 'memo_entry']:
+            if field == 'supplier_name':
+                criterion = supplier_table.name.ilike(f'%{search_query}%')
+            else:  # party_name
+                criterion = party_table.name.ilike(f'%{search_query}%')
+                
+            if search_criteria is None:
+                search_criteria = criterion
+            else:
+                search_criteria = search_criteria | criterion
+        # Handle 'mode' field specially as it's a reserved keyword in PostgreSQL
+        elif field == 'mode' and table_name == 'memo_entry':
+            # Use the Field class to properly quote the field name
+            from pypika import Field
+            criterion = Field('mode').ilike(f'%{search_query}%')
+            if search_criteria is None:
+                search_criteria = criterion
+            else:
+                search_criteria = search_criteria | criterion
         else:
             # For text fields, use ILIKE for case-insensitive search
             criterion = entity_table[field].ilike(f'%{search_query}%')
@@ -100,27 +121,39 @@ def search_entities(table_name: str, search_query: str, **kwargs):
                 value = filter_item.get('value')
                 
                 if field and operator and value is not None:
+                    # Handle supplier_name and party_name fields specially for joined tables
+                    if field == 'supplier_name' and table_name in ['register_entry', 'memo_entry']:
+                        field_ref = supplier_table.name
+                    elif field == 'party_name' and table_name in ['register_entry', 'memo_entry']:
+                        field_ref = party_table.name
+                    # Handle 'mode' field specially as it's a reserved keyword in PostgreSQL
+                    elif field == 'mode' and table_name == 'memo_entry':
+                        from pypika import Field
+                        field_ref = Field('mode')
+                    else:
+                        field_ref = entity_table[field]
+                    
                     # Apply the appropriate operator
                     if operator == 'equals':
-                        query = query.where(entity_table[field] == value)
+                        query = query.where(field_ref == value)
                     elif operator == 'notEquals':
-                        query = query.where(entity_table[field] != value)
+                        query = query.where(field_ref != value)
                     elif operator == 'contains':
-                        query = query.where(entity_table[field].ilike(f'%{value}%'))
+                        query = query.where(field_ref.ilike(f'%{value}%'))
                     elif operator == 'notContains':
-                        query = query.where(entity_table[field].not_ilike(f'%{value}%'))
+                        query = query.where(field_ref.not_ilike(f'%{value}%'))
                     elif operator == 'startsWith':
-                        query = query.where(entity_table[field].ilike(f'{value}%'))
+                        query = query.where(field_ref.ilike(f'{value}%'))
                     elif operator == 'endsWith':
-                        query = query.where(entity_table[field].ilike(f'%{value}'))
+                        query = query.where(field_ref.ilike(f'%{value}'))
                     elif operator == 'greaterThan':
-                        query = query.where(entity_table[field] > value)
+                        query = query.where(field_ref > value)
                     elif operator == 'lessThan':
-                        query = query.where(entity_table[field] < value)
+                        query = query.where(field_ref < value)
                     elif operator == 'greaterThanOrEqual':
-                        query = query.where(entity_table[field] >= value)
+                        query = query.where(field_ref >= value)
                     elif operator == 'lessThanOrEqual':
-                        query = query.where(entity_table[field] <= value)
+                        query = query.where(field_ref <= value)
                     # Date operators would need date conversion logic
         except Exception as e:
             print(f"Error processing field filters: {str(e)}")
@@ -128,8 +161,18 @@ def search_entities(table_name: str, search_query: str, **kwargs):
     
     # Add any additional filters from kwargs
     for key, value in kwargs.items():
-        if key not in ['table_name', 'search'] and value is not None:
-            query = query.where(entity_table[key] == value)
+        if key not in ['table_name', 'search', 'field_filters'] and value is not None:
+            # Handle supplier_name and party_name fields specially for joined tables
+            if key == 'supplier_name' and table_name in ['register_entry', 'memo_entry']:
+                query = query.where(supplier_table.name == value)
+            elif key == 'party_name' and table_name in ['register_entry', 'memo_entry']:
+                query = query.where(party_table.name == value)
+            # Handle 'mode' field specially as it's a reserved keyword in PostgreSQL
+            elif key == 'mode' and table_name == 'memo_entry':
+                from pypika import Field
+                query = query.where(Field('mode') == value)
+            else:
+                query = query.where(entity_table[key] == value)
     
     # Get the SQL
     sql = query.get_sql()
