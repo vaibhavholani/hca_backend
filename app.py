@@ -453,10 +453,36 @@ def search():
 def get_all_register_entries_with_names():
     """Retrieves all register entries with supplier and party names."""
     try:
-        result = retrieve_register_entry.get_all_register_entries_with_names()
+        # Get pagination parameters
+        page = request.args.get('page', type=int)
+        page_size = request.args.get('page_size', type=int)
+        
+        # Get filter parameters
+        filters = {}
+        if request.args.get('supplier_id'):
+            filters['supplier_id'] = int(request.args.get('supplier_id'))
+        if request.args.get('party_id'):
+            filters['party_id'] = int(request.args.get('party_id'))
+        if request.args.get('start_date'):
+            filters['start_date'] = request.args.get('start_date')
+        if request.args.get('end_date'):
+            filters['end_date'] = request.args.get('end_date')
+        if request.args.get('register_number'):
+            filters['register_number'] = int(request.args.get('register_number'))
+        
+        # Only pass filters if they exist
+        kwargs = {}
+        if page is not None and page_size is not None:
+            kwargs['page'] = page
+            kwargs['page_size'] = page_size
+        if filters:
+            kwargs['filters'] = filters
+            
+        result = retrieve_register_entry.get_all_register_entries_with_names(**kwargs)
+        
         if result['status'] == 'error':
             return jsonify(result), 500
-        return json.dumps(result['result'], cls=CustomEncoder)
+        return json.dumps(result, cls=CustomEncoder)
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
@@ -464,10 +490,36 @@ def get_all_register_entries_with_names():
 def get_all_memo_entries_with_names():
     """Retrieves all memo entries with supplier and party names."""
     try:
-        result = retrieve_memo_entry.get_all_memo_entries_with_names()
+        # Get pagination parameters
+        page = request.args.get('page', type=int)
+        page_size = request.args.get('page_size', type=int)
+        
+        # Get filter parameters
+        filters = {}
+        if request.args.get('supplier_id'):
+            filters['supplier_id'] = int(request.args.get('supplier_id'))
+        if request.args.get('party_id'):
+            filters['party_id'] = int(request.args.get('party_id'))
+        if request.args.get('start_date'):
+            filters['start_date'] = request.args.get('start_date')
+        if request.args.get('end_date'):
+            filters['end_date'] = request.args.get('end_date')
+        if request.args.get('memo_number'):
+            filters['memo_number'] = int(request.args.get('memo_number'))
+        
+        # Only pass filters if they exist
+        kwargs = {}
+        if page is not None and page_size is not None:
+            kwargs['page'] = page
+            kwargs['page_size'] = page_size
+        if filters:
+            kwargs['filters'] = filters
+            
+        result = retrieve_memo_entry.get_all_memo_entries_with_names(**kwargs)
+        
         if result['status'] == 'error':
             return jsonify(result), 500
-        return json.dumps(result['result'], cls=CustomEncoder)
+        return json.dumps(result, cls=CustomEncoder)
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 

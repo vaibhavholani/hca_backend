@@ -3,8 +3,9 @@ from typing import List, Union, Tuple, Dict
 from psql import db_connector, execute_query
 from API_Database.utils import parse_date, sql_date
 from datetime import datetime, timedelta
-from pypika import Query, Table, Field, functions as fn
+from pypika import Query, Table, Field, functions as fn, Order
 from Exceptions import DataError
+import math
 
 def get_all_register_entries(**kwargs):
     """
@@ -393,8 +394,17 @@ def generate_total(supplier_ids: Union[int, List[int]], party_ids: Union[int, Li
         party_ids = [party_ids]
     return get_total_bill_entity_bulk(supplier_ids=supplier_ids, party_ids=party_ids, start_date=start_date, end_date=end_date, column_name=column_name, pending=pending, days=days, supplier_all=supplier_all, party_all=party_all)
 
-def get_all_register_entries_with_names() -> Dict:
-    """Retrieves all register entries with supplier and party names."""
+def get_all_register_entries_with_names(page=None, page_size=None, filters=None) -> Dict:
+    """Retrieves all register entries with supplier and party names.
+    
+    Args:
+        page: Optional page number for pagination (1-indexed)
+        page_size: Optional number of items per page
+        filters: Optional dictionary of filters to apply
+    
+    Returns:
+        Dictionary with status and result
+    """
     try:
         # Create table references
         register_entry_table = Table('register_entry')
@@ -410,6 +420,46 @@ def get_all_register_entries_with_names() -> Dict:
                 supplier_table.name.as_('supplier_name'),
                 party_table.name.as_('party_name')
             )
+        
+        # Apply filters if provided
+        if filters:
+            if 'supplier_id' in filters and filters['supplier_id']:
+                query = query.where(register_entry_table.supplier_id == filters['supplier_id'])
+            if 'party_id' in filters and filters['party_id']:
+                query = query.where(register_entry_table.party_id == filters['party_id'])
+            if 'start_date' in filters and filters['start_date']:
+                query = query.where(register_entry_table.register_date >= filters['start_date'])
+            if 'end_date' in filters and filters['end_date']:
+                query = query.where(register_entry_table.register_date <= filters['end_date'])
+            if 'register_number' in filters and filters['register_number']:
+                query = query.where(register_entry_table.bill_number == filters['register_number'])
+        
+        # Get total count for pagination
+        count_query = Query.from_(register_entry_table).select(fn.Count('*').as_('total'))
+        
+        # Apply the same filters to count query
+        if filters:
+            if 'supplier_id' in filters and filters['supplier_id']:
+                count_query = count_query.where(register_entry_table.supplier_id == filters['supplier_id'])
+            if 'party_id' in filters and filters['party_id']:
+                count_query = count_query.where(register_entry_table.party_id == filters['party_id'])
+            if 'start_date' in filters and filters['start_date']:
+                count_query = count_query.where(register_entry_table.register_date >= filters['start_date'])
+            if 'end_date' in filters and filters['end_date']:
+                count_query = count_query.where(register_entry_table.register_date <= filters['end_date'])
+            if 'register_number' in filters and filters['register_number']:
+                count_query = count_query.where(register_entry_table.bill_number == filters['register_number'])
+        
+        count_result = execute_query(count_query.get_sql())
+        total_count = count_result['result'][0]['total'] if count_result['status'] == 'okay' else 0
+        
+        # Apply pagination if requested
+        if page is not None and page_size is not None:
+            offset = (page - 1) * page_size
+            query = query.limit(page_size).offset(offset)
+            
+        # Add order by to ensure consistent results
+        query = query.orderby(register_entry_table.register_date, order=Order.desc)
         
         sql = query.get_sql()
         result = execute_query(sql)
@@ -439,6 +489,15 @@ def get_all_register_entries_with_names() -> Dict:
             bills_result = execute_query(bills_query.get_sql())
             entry['memo_bills'] = bills_result['result'] if bills_result['status'] == 'okay' else []
         
-        return {'status': 'okay', 'result': register_entries}
+        return {
+            'status': 'okay', 
+            'result': register_entries,
+            'pagination': {
+                'total': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': math.ceil(total_count / page_size) if page_size else 1
+            } if page is not None and page_size is not None else None
+        }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}

@@ -8,8 +8,9 @@ from psql import db_connector, execute_query
 from API_Database.utils import parse_date, sql_date
 from API_Database.retrieve_partial_payment import get_partial_payment
 from API_Database.retrieve_partial_payment import get_partial_payment_bulk
-from pypika import Query, Table, Field, functions as fn
+from pypika import Query, Table, Field, functions as fn, Order
 import sys
+import math
 sys.path.append('../')
 
 def check_new_memo(memo_number: int, date: datetime, *args, **kwargs) -> bool:
@@ -226,8 +227,17 @@ def generate_memo_total(supplier_ids: Union[int, List[int]], party_ids: Union[in
         end_date = parse_date(end_date)
     return get_total_memo_entity_bulk(supplier_ids, party_ids, start_date, end_date, memo_type, supplier_all=supplier_all, party_all=party_all)
 
-def get_all_memo_entries_with_names() -> Dict:
-    """Retrieves all memo entries with supplier and party names."""
+def get_all_memo_entries_with_names(page=None, page_size=None, filters=None) -> Dict:
+    """Retrieves all memo entries with supplier and party names.
+    
+    Args:
+        page: Optional page number for pagination (1-indexed)
+        page_size: Optional number of items per page
+        filters: Optional dictionary of filters to apply
+    
+    Returns:
+        Dictionary with status and result
+    """
     try:
         # Create table references
         memo_entry_table = Table('memo_entry')
@@ -243,6 +253,46 @@ def get_all_memo_entries_with_names() -> Dict:
                 supplier_table.name.as_('supplier_name'),
                 party_table.name.as_('party_name')
             )
+        
+        # Apply filters if provided
+        if filters:
+            if 'supplier_id' in filters and filters['supplier_id']:
+                query = query.where(memo_entry_table.supplier_id == filters['supplier_id'])
+            if 'party_id' in filters and filters['party_id']:
+                query = query.where(memo_entry_table.party_id == filters['party_id'])
+            if 'start_date' in filters and filters['start_date']:
+                query = query.where(memo_entry_table.register_date >= filters['start_date'])
+            if 'end_date' in filters and filters['end_date']:
+                query = query.where(memo_entry_table.register_date <= filters['end_date'])
+            if 'memo_number' in filters and filters['memo_number']:
+                query = query.where(memo_entry_table.memo_number == filters['memo_number'])
+        
+        # Get total count for pagination
+        count_query = Query.from_(memo_entry_table).select(fn.Count('*').as_('total'))
+        
+        # Apply the same filters to count query
+        if filters:
+            if 'supplier_id' in filters and filters['supplier_id']:
+                count_query = count_query.where(memo_entry_table.supplier_id == filters['supplier_id'])
+            if 'party_id' in filters and filters['party_id']:
+                count_query = count_query.where(memo_entry_table.party_id == filters['party_id'])
+            if 'start_date' in filters and filters['start_date']:
+                count_query = count_query.where(memo_entry_table.register_date >= filters['start_date'])
+            if 'end_date' in filters and filters['end_date']:
+                count_query = count_query.where(memo_entry_table.register_date <= filters['end_date'])
+            if 'memo_number' in filters and filters['memo_number']:
+                count_query = count_query.where(memo_entry_table.memo_number == filters['memo_number'])
+        
+        count_result = execute_query(count_query.get_sql())
+        total_count = count_result['result'][0]['total'] if count_result['status'] == 'okay' else 0
+        
+        # Apply pagination if requested
+        if page is not None and page_size is not None:
+            offset = (page - 1) * page_size
+            query = query.limit(page_size).offset(offset)
+            
+        # Add order by to ensure consistent results
+        query = query.orderby(memo_entry_table.register_date, order=Order.desc)
         
         sql = query.get_sql()
         result = execute_query(sql)
@@ -278,6 +328,15 @@ def get_all_memo_entries_with_names() -> Dict:
             payments_result = execute_query(payments_query.get_sql())
             entry['payment'] = payments_result['result'] if payments_result['status'] == 'okay' else []
         
-        return {'status': 'okay', 'result': memo_entries}
+        return {
+            'status': 'okay', 
+            'result': memo_entries,
+            'pagination': {
+                'total': total_count,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': math.ceil(total_count / page_size) if page_size else 1
+            } if page is not None and page_size is not None else None
+        }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
