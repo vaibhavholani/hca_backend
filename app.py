@@ -447,16 +447,6 @@ def search():
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route(BASE + '/v2/get_all_memo_entries', methods=['GET'])
-def get_all_memo_entries_with_names():
-    """Retrieves all memo entries with supplier and party names."""
-    try:
-        result = retrieve_memo_entry.get_all_memo_entries_with_names()
-        if result['status'] == 'error':
-            return jsonify(result), 500
-        return json.dumps(result['result'], cls=CustomEncoder)
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
 def get_all_register_entries_with_names():
@@ -480,16 +470,6 @@ def get_all_memo_entries_with_names():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
-def get_all_register_entries_with_names():
-    """Retrieves all register entries with supplier and party names."""
-    try:
-        result = retrieve_register_entry.get_all_register_entries_with_names()
-        if result['status'] == 'error':
-            return jsonify(result), 500
-        return json.dumps(result['result'], cls=CustomEncoder)
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
