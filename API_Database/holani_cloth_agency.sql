@@ -1,12 +1,13 @@
 CREATE SEQUENCE supplier_seq;
 
 CREATE TABLE supplier (
-	id INT DEFAULT NEXTVAL ('supplier_seq') PRIMARY KEY,
-	name VARCHAR(100),
-	address VARCHAR(300),
-	phone_number VARCHAR(20),
-	UNIQUE (name),
-	last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
+    id INT DEFAULT NEXTVAL ('supplier_seq') PRIMARY KEY,
+    name VARCHAR(100),
+    address VARCHAR(300),
+    phone_number VARCHAR(20),
+    city VARCHAR(20) CHECK (city IN ('Bangalore', 'Jaipur', 'Kolkata', 'Surat', 'Varanasi', 'Belgaum', 'Mumbai', 'Delhi', 'Mau')),
+    UNIQUE (name),
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
 );
 
 
