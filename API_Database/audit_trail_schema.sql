@@ -1,24 +1,24 @@
 -- Create Users table
 CREATE SEQUENCE IF NOT EXISTS users_seq;
 CREATE TABLE IF NOT EXISTS users (
-    id INT DEFAULT NEXTVAL ('users_seq') PRIMARY KEY,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(100),
-    email VARCHAR(100),
-    role VARCHAR(50) NOT NULL,
+    id BIGINT DEFAULT NEXTVAL('users_seq') PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    full_name TEXT,
+    email TEXT,
+    role TEXT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-    last_updated TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
-    last_updated_by INT
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 -- Create Permissions table
 CREATE SEQUENCE IF NOT EXISTS permissions_seq;
 CREATE TABLE IF NOT EXISTS permissions (
-    id INT DEFAULT NEXTVAL ('permissions_seq') PRIMARY KEY,
-    role VARCHAR(50) NOT NULL,
-    resource VARCHAR(50) NOT NULL,
+    id BIGINT DEFAULT NEXTVAL('permissions_seq') PRIMARY KEY,
+    role TEXT NOT NULL,
+    resource TEXT NOT NULL,
     can_create BOOLEAN DEFAULT FALSE,
     can_read BOOLEAN DEFAULT TRUE,
     can_update BOOLEAN DEFAULT FALSE,
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS permissions (
 -- Create Audit log table
 CREATE SEQUENCE IF NOT EXISTS audit_log_seq;
 CREATE TABLE IF NOT EXISTS audit_log (
-    id INT DEFAULT NEXTVAL ('audit_log_seq') PRIMARY KEY,
-    user_id INT,
-    table_name VARCHAR(100) NOT NULL,
-    record_id INT NOT NULL,
-    action VARCHAR(10) NOT NULL, -- INSERT, UPDATE, DELETE
-    timestamp TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    id BIGINT DEFAULT NEXTVAL('audit_log_seq') PRIMARY KEY,
+    user_id BIGINT,
+    table_name TEXT NOT NULL,
+    record_id BIGINT NOT NULL,
+    action TEXT NOT NULL, -- INSERT, UPDATE, DELETE
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     changes JSONB,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -48,18 +48,18 @@ BEGIN
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_type = 'BASE TABLE'
-        AND table_name NOT IN ('users', 'permissions', 'audit_log')
+          AND table_type = 'BASE TABLE'
+          AND table_name NOT IN ('users', 'permissions', 'audit_log')
     LOOP
         -- Check if created_at column exists
         IF NOT EXISTS (
             SELECT 1 
             FROM information_schema.columns 
             WHERE table_schema = 'public' 
-            AND table_name = table_rec.table_name 
-            AND column_name = 'created_at'
+              AND table_name = table_rec.table_name 
+              AND column_name = 'created_at'
         ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN created_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
+            EXECUTE format('ALTER TABLE %I ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
         END IF;
         
         -- Check if created_by column exists
@@ -67,10 +67,10 @@ BEGIN
             SELECT 1 
             FROM information_schema.columns 
             WHERE table_schema = 'public' 
-            AND table_name = table_rec.table_name 
-            AND column_name = 'created_by'
+              AND table_name = table_rec.table_name 
+              AND column_name = 'created_by'
         ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN created_by INT', table_rec.table_name);
+            EXECUTE format('ALTER TABLE %I ADD COLUMN created_by BIGINT', table_rec.table_name);
         END IF;
         
         -- Check if last_updated column exists
@@ -78,10 +78,10 @@ BEGIN
             SELECT 1 
             FROM information_schema.columns 
             WHERE table_schema = 'public' 
-            AND table_name = table_rec.table_name 
-            AND column_name = 'last_updated'
+              AND table_name = table_rec.table_name 
+              AND column_name = 'last_updated'
         ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
+            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
         END IF;
         
         -- Check if last_updated_by column exists
@@ -89,31 +89,25 @@ BEGIN
             SELECT 1 
             FROM information_schema.columns 
             WHERE table_schema = 'public' 
-            AND table_name = table_rec.table_name 
-            AND column_name = 'last_updated_by'
+              AND table_name = table_rec.table_name 
+              AND column_name = 'last_updated_by'
         ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated_by INT', table_rec.table_name);
+            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated_by BIGINT', table_rec.table_name);
         END IF;
         
-        -- Add foreign key constraints
-        EXECUTE format('
-            DO $$ 
-            BEGIN 
-                BEGIN
-                    ALTER TABLE %I ADD CONSTRAINT fk_%I_created_by FOREIGN KEY (created_by) REFERENCES users(id);
-                EXCEPTION
-                    WHEN duplicate_object THEN NULL;
-                END;
-                
-                BEGIN
-                    ALTER TABLE %I ADD CONSTRAINT fk_%I_last_updated_by FOREIGN KEY (last_updated_by) REFERENCES users(id);
-                EXCEPTION
-                    WHEN duplicate_object THEN NULL;
-                END;
-            END $$;
-        ', 
-        table_rec.table_name, table_rec.table_name,
-        table_rec.table_name, table_rec.table_name);
+        -- Add foreign key constraint for created_by with exception handling
+        BEGIN
+            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT fk_%I_created_by FOREIGN KEY (created_by) REFERENCES users(id)', table_rec.table_name, table_rec.table_name);
+        EXCEPTION
+            WHEN duplicate_object THEN NULL;
+        END;
+
+        -- Add foreign key constraint for last_updated_by with exception handling
+        BEGIN
+            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT fk_%I_last_updated_by FOREIGN KEY (last_updated_by) REFERENCES users(id)', table_rec.table_name, table_rec.table_name);
+        EXCEPTION
+            WHEN duplicate_object THEN NULL;
+        END;
     END LOOP;
 END $$;
 
