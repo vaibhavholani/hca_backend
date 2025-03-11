@@ -600,7 +600,7 @@ def add_entry():
 @app.route(BASE + '/add/register_entry', methods=['POST'])
 def add_register_entry():
     """Inserts a register entry into the database using POST data and returns the insertion result."""
-    breakpoint()
+
     data = request.json
     response = RegisterEntry.insert(data)
     return jsonify(response)

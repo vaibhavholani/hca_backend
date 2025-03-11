@@ -27,6 +27,84 @@ def cursor(dict=False) -> Tuple:
         db_cursor = database.cursor()
     return (database, db_cursor)
 
+def add_audit_fields_to_query(query: str, query_type: str, current_user_id: Optional[int]) -> str:
+    """
+    Add audit trail fields (created_by, last_updated_by) to queries when a user ID is available.
+    
+    Args:
+        query: The SQL query
+        query_type: The type of query (INSERT, UPDATE)
+        current_user_id: The ID of the current user
+        
+    Returns:
+        str: The query with audit fields added if needed
+    """
+    if not current_user_id or query_type not in ['INSERT', 'UPDATE']:
+        return query
+    
+    try:
+        if query_type == 'INSERT':
+            # Check if the query already includes created_by
+            if 'created_by' in query.lower():
+                return query
+                
+            # Handle INSERT with column list and VALUES
+            columns_match = re.search(r'INSERT\s+INTO\s+[^\s\(]+\s*\((.+?)\)', query, re.IGNORECASE | re.DOTALL)
+            values_match = re.search(r'VALUES\s*\((.+?)\)', query, re.IGNORECASE | re.DOTALL)
+            
+            if columns_match and values_match:
+                columns_str = columns_match.group(1).strip()
+                values_str = values_match.group(1).strip()
+                
+                # Add created_by and last_updated_by to columns and values
+                new_columns = f"{columns_str}, created_by, last_updated_by"
+                new_values = f"{values_str}, {current_user_id}, {current_user_id}"
+                
+                # Replace in the query
+                new_query = re.sub(
+                    r'\((.+?)\)\s*VALUES\s*\((.+?)\)',
+                    f"({new_columns}) VALUES ({new_values})",
+                    query,
+                    flags=re.IGNORECASE | re.DOTALL
+                )
+                return new_query
+        
+        elif query_type == 'UPDATE':
+            # Check if the query already includes last_updated_by
+            if 'last_updated_by' in query.lower():
+                return query
+                
+            # Find the SET clause
+            set_match = re.search(r'SET\s+(.+?)(?:\s+WHERE\s+|\s*$)', query, re.IGNORECASE | re.DOTALL)
+            if set_match:
+                set_clause = set_match.group(1).strip()
+                
+                # Add last_updated_by to the SET clause
+                new_set_clause = f"{set_clause}, last_updated_by = {current_user_id}"
+                
+                # Replace in the query
+                if 'WHERE' in query.upper():
+                    new_query = re.sub(
+                        r'SET\s+(.+?)\s+WHERE',
+                        f"SET {new_set_clause} WHERE",
+                        query,
+                        flags=re.IGNORECASE | re.DOTALL
+                    )
+                else:
+                    new_query = re.sub(
+                        r'SET\s+(.+?)$',
+                        f"SET {new_set_clause}",
+                        query,
+                        flags=re.IGNORECASE | re.DOTALL
+                    )
+                return new_query
+    
+    except Exception as e:
+        print(f"Error adding audit fields to query: {e}")
+        # If there's an error, return the original query to avoid breaking functionality
+    
+    return query
+
 def ensure_returning_id(query: str, query_type: str) -> str:
     """
     Ensure that INSERT, UPDATE, and DELETE queries have a RETURNING id clause.
@@ -90,9 +168,12 @@ def execute_query(query: str, dictCursor: bool=True, exec_remote: bool=True, cur
     if query_type not in ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP']:
         raise DataError('Invalid query type')
     
+    # Add audit fields to INSERT and UPDATE queries
+    if query_type in ['INSERT', 'UPDATE'] and current_user_id is not None:
+        query = add_audit_fields_to_query(query, query_type, current_user_id)
+    
     # Ensure INSERT, UPDATE, and DELETE queries have a RETURNING id clause
     if query_type in ['INSERT', 'UPDATE', 'DELETE']:
-
         query = ensure_returning_id(query, query_type)
     
     try:
