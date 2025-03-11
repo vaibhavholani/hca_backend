@@ -332,42 +332,53 @@ class User(Individual):
         Returns:
             Dict: The result of the update operation
         """
-        # Prepare the update fields
-        update_fields = [
-            f"full_name = '{self.full_name}'",
-            f"email = '{self.email}'",
-            f"role = '{self.role}'",
-            f"is_active = {str(self.is_active).lower()}",
-            f"last_updated = CURRENT_TIMESTAMP"
-        ]
-        
-        if updated_by:
-            update_fields.append(f"last_updated_by = {updated_by}")
-        
-        # Add password_hash if it's not empty
-        if self.password_hash:
-            update_fields.append(f"password_hash = '{self.password_hash}'")
-        
-        update_str = ', '.join(update_fields)
-        
-        # Execute the update query
-        query = f"""
-        UPDATE users
-        SET {update_str}
-        WHERE id = {self.id}
-        RETURNING *
-        """
-        
         try:
-            result = execute_query(query)
+            # Escape special characters in text fields to prevent SQL injection
+            def escape_sql_string(value):
+                if value is None:
+                    return "NULL"
+                return "'" + str(value).replace("'", "''") + "'"
+            
+            # Prepare the update fields
+            update_fields = [
+                f"full_name = {escape_sql_string(self.full_name)}",
+                f"email = {escape_sql_string(self.email)}",
+                f"role = {escape_sql_string(self.role)}",
+                f"is_active = {str(self.is_active).lower()}",
+                f"last_updated = CURRENT_TIMESTAMP"
+            ]
+            
+            if updated_by:
+                update_fields.append(f"last_updated_by = {updated_by}")
+            
+            # Add password_hash if it's not empty
+            if self.password_hash:
+                update_fields.append(f"password_hash = {escape_sql_string(self.password_hash)}")
+            
+            update_str = ', '.join(update_fields)
+            
+            # Execute the update query
+            query = f"""
+            UPDATE users
+            SET {update_str}
+            WHERE id = {self.id}
+            RETURNING *
+            """
+            
+            result = execute_query(query, current_user_id=updated_by)
             if result['status'] == 'okay' and result['result']:
                 # Update the instance with the returned data
                 updated_user = self.from_dict(result['result'][0])
                 self.__dict__.update(updated_user.__dict__)
                 
                 return {'status': 'okay', 'message': 'User updated successfully'}
-            return {'status': 'error', 'message': 'Failed to update user'}
+            
+            # If we get here, the query executed but didn't return any rows
+            # This could happen if the user doesn't exist
+            return {'status': 'error', 'message': 'User not found or no changes made'}
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {'status': 'error', 'message': f'Error updating user: {str(e)}'}
     
     def delete(self) -> Dict:

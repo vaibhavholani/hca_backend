@@ -26,6 +26,12 @@ def record_audit_log(
     Returns:
         Dict: The result of the operation
     """
+    # Safety check: prevent audit logging for the audit_log table itself to avoid infinite loops
+    if table_name.lower() == 'audit_log':
+        return {
+            'status': 'skipped',
+            'message': 'Skipped audit logging for audit_log table to prevent infinite loops'
+        }
     # Validate action
     if action not in ['INSERT', 'UPDATE', 'DELETE']:
         return {
@@ -44,7 +50,14 @@ def record_audit_log(
             else:
                 changes_str[key] = value
         
-        changes_json = f"'{json.dumps(changes_str)}'"
+        # Escape single quotes in JSON string
+        json_string = json.dumps(changes_str)
+        json_string_escaped = json_string.replace("'", "''")
+        changes_json = f"'{json_string_escaped}'"
+    
+    # Escape table name and action to prevent SQL injection
+    table_name_escaped = table_name.replace("'", "''")
+    action_escaped = action.replace("'", "''")
     
     # Build the query
     user_id_str = 'NULL' if user_id is None else str(user_id)
@@ -54,7 +67,7 @@ def record_audit_log(
         user_id, table_name, record_id, action, changes
     )
     VALUES (
-        {user_id_str}, '{table_name}', {record_id}, '{action}', {changes_json}
+        {user_id_str}, '{table_name_escaped}', {record_id}, '{action_escaped}', {changes_json}
     )
     RETURNING id
     """
@@ -72,6 +85,8 @@ def record_audit_log(
             'message': 'Failed to record audit log'
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {
             'status': 'error',
             'message': f'Error recording audit log: {str(e)}'

@@ -10,7 +10,7 @@ from flask_jwt_extended import JWTManager, get_jwt
 from flask_jwt_extended import create_refresh_token, verify_jwt_in_request
 import base64
 from functools import wraps
-from pypika import Query, Table, fn
+from pypika import Query, Table, functions as fn
 from psql import execute_query
 from API_Database import retrieve_indivijual, retrieve_credit, retrieve_register_entry, retrieve_memo_dalali, update_memo_dalali
 from OCR.name_cache import NameMatchCache
@@ -91,6 +91,26 @@ def get_current_user_id():
     """
     user = get_current_user()
     return user.id if user else None
+
+def get_user_id_from_token():
+    """
+    Get the user ID directly from the JWT token claims without querying the database.
+    
+    Returns:
+        int: The user ID from the token or None if not present/authenticated
+    """
+    try:
+        # Verify JWT is present
+        verify_jwt_in_request()
+        
+        # Get all claims from the token
+        claims = get_jwt()
+        
+        # Return the user_id claim
+        return claims.get('user_id')
+    except Exception:
+        # Return None if there's any error (e.g., no JWT token)
+        return None
 
 @app.route(BASE + '/login', methods=['POST'])
 def login():
@@ -519,6 +539,9 @@ def search_audit_trail():
 @app.route(BASE + '/supplier_names_and_ids', methods=['GET'])
 def get_all_supplier_names():
     """Retrieves all supplier names and IDs from the database and returns them in JSON format."""
+    
+    # Print the full request
+    print(request.args)
     data = retrieve_indivijual.get_all_names_ids('supplier')
     json_data = json.dumps(data)
     return json_data
@@ -577,6 +600,7 @@ def add_entry():
 @app.route(BASE + '/add/register_entry', methods=['POST'])
 def add_register_entry():
     """Inserts a register entry into the database using POST data and returns the insertion result."""
+    breakpoint()
     data = request.json
     response = RegisterEntry.insert(data)
     return jsonify(response)
