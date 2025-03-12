@@ -116,6 +116,10 @@ def get_audit_history(
     Returns:
         Dict: The audit history
     """
+
+    # Clean up table name and remove all quotes
+    table_name = table_name.lower().replace("'", "''").replace('"', '')
+    
     query = f"""
     SELECT a.id, a.action, a.timestamp, a.changes,
            u.username, u.full_name
