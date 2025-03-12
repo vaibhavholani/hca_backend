@@ -55,10 +55,7 @@ class Entry:
         Returns:
             Dict: The result of the delete operation
         """
-        from psql import execute_query
-        
-        query = f'DELETE from {self.table_name} where id={self.id}'
-        return execute_query(query, current_user_id=current_user_id)
+        return delete_by_id(self.get_id(), self.table_name)
 
     def get_audit_history(self, limit: int = 100, offset: int = 0) -> Dict:
         """
