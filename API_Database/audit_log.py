@@ -32,6 +32,10 @@ def record_audit_log(
             'status': 'skipped',
             'message': 'Skipped audit logging for audit_log table to prevent infinite loops'
         }
+    
+    # Clean up table name and remove all quotes
+    table_name = table_name.lower().replace("'", "''").replace('"', '')
+    
     # Validate action
     if action not in ['INSERT', 'UPDATE', 'DELETE']:
         return {
@@ -71,6 +75,8 @@ def record_audit_log(
     )
     RETURNING id
     """
+
+
     
     try:
         result = execute_query(query, exec_remote=False)

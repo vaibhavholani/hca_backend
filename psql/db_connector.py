@@ -42,6 +42,10 @@ def add_audit_fields_to_query(query: str, query_type: str, current_user_id: Opti
     if not current_user_id or query_type not in ['INSERT', 'UPDATE']:
         return query
     
+    # If the table name is audit_log, don't add audit fields
+    if 'audit_log' in query.lower():
+        return query
+    
     try:
         if query_type == 'INSERT':
             # Check if the query already includes created_by

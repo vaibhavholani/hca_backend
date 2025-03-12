@@ -8,6 +8,7 @@ import signal
 import sys
 import os
 import uuid
+import functools
 from typing import Dict, Union, List, Optional, Any, Tuple
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -23,9 +24,81 @@ from Entities.MemoEntry import MemoEntry
 from Entities.OrderForm import OrderForm
 from Entities.RegisterEntry import RegisterEntry
 from API_Database.audit_log import record_audit_log, get_audit_history, search_audit_logs, compare_changes
+import psql
 from psql import execute_query
 
 load_dotenv()
+
+# Global variables for fixed test user
+FIXED_TEST_USERNAME = "audit_test_user"
+FIXED_TEST_PASSWORD = "test_password"
+FIXED_TEST_ROLE = "admin"
+FIXED_TEST_FULL_NAME = "Audit Test User"
+FIXED_TEST_EMAIL = "audit_test@example.com"
+FIXED_TEST_USER_ID = None  # Will be set during setup
+
+# Store the original execute_query function to restore it later
+original_execute_query = psql.execute_query
+
+def setup_fixed_test_user():
+    """
+    Set up a fixed test user for all audit trail tests.
+    This user will be created once and reused across all tests.
+    
+    Returns:
+        int: The ID of the fixed test user
+    """
+    global FIXED_TEST_USER_ID
+    
+    # Check if the user already exists
+    existing_user = User.get_by_username(FIXED_TEST_USERNAME)
+    if existing_user:
+        print(f"Found existing test user with ID: {existing_user.id}")
+        # Ensure the user is active
+        if not existing_user.is_active:
+            print("Reactivating existing test user...")
+            existing_user.is_active = True
+            existing_user.update(updated_by=existing_user.id)
+        FIXED_TEST_USER_ID = existing_user.id
+    else:
+        # Create a new fixed test user
+        print(f"Creating new fixed test user: {FIXED_TEST_USERNAME}")
+        new_user = User.create(
+            username=FIXED_TEST_USERNAME,
+            password=FIXED_TEST_PASSWORD,
+            role=FIXED_TEST_ROLE,
+            full_name=FIXED_TEST_FULL_NAME,
+            email=FIXED_TEST_EMAIL
+        )
+        FIXED_TEST_USER_ID = new_user.id
+        print(f"Created fixed test user with ID: {FIXED_TEST_USER_ID}")
+    
+    return FIXED_TEST_USER_ID
+
+def patched_execute_query(query: str, dictCursor: bool=True, exec_remote: bool=True, current_user_id: Optional[int]=None, **kwargs):
+    """
+    A patched version of execute_query that always uses the fixed test user ID
+    unless a specific user ID is provided.
+    """
+    global FIXED_TEST_USER_ID
+    
+    # Always use the fixed test user ID unless another user ID is explicitly provided
+    if current_user_id is None and FIXED_TEST_USER_ID is not None:
+        current_user_id = FIXED_TEST_USER_ID
+    
+    return original_execute_query(query, dictCursor, exec_remote, current_user_id, **kwargs)
+
+def patch_execute_query():
+    """
+    Patch the execute_query function to use our fixed test user.
+    """
+    psql.execute_query = patched_execute_query
+
+def restore_execute_query():
+    """
+    Restore the original execute_query function.
+    """
+    psql.execute_query = original_execute_query
 
 # Test constants
 TEST_USERNAME = f"test_user_{uuid.uuid4().hex[:8]}"  # Generate unique username for each test run
@@ -45,9 +118,9 @@ TEST_TRANSPORTER_NAME = f"test_transporter_{uuid.uuid4().hex[:8]}"
 TEST_TRANSPORTER_ADDRESS = "321 Test Road"
 TEST_ITEM_NAME = f"test_item_{uuid.uuid4().hex[:8]}"
 TEST_ITEM_COLOR = "Red"
-TEST_BILL_NUMBER = f"BILL-{uuid.uuid4().hex[:8]}"
-TEST_MEMO_NUMBER = int(uuid.uuid4().int % 10000000)
-TEST_ORDER_FORM_NUMBER = int(uuid.uuid4().int % 1000)
+TEST_BILL_NUMBER = 1190
+TEST_MEMO_NUMBER = 1194
+TEST_ORDER_FORM_NUMBER = 1195
 TODAY = datetime.now().date()
 YESTERDAY = (TODAY - timedelta(days=1)).strftime('%Y-%m-%d')
 
@@ -174,14 +247,26 @@ def test_user_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
+        
+        # Create a new user to test audit trail on
+        test_username = f"test_user_{uuid.uuid4().hex[:8]}"
+        print(f"\nCreating a new user to test audit trail: {test_username}")
+        test_user = User.create(
+            username=test_username,
+            password=TEST_PASSWORD,
+            role=TEST_ROLE,
+            full_name=TEST_FULL_NAME,
+            email=TEST_EMAIL
+        )
+        test_user_id = test_user.id
+        cleanup_list.append(test_user)
+        print(f"Created test user with ID: {test_user_id}")
         
         # Verify INSERT audit log
         print("\nVerifying INSERT audit log for User...")
-        assert verify_audit_history("users", user_id, ["INSERT"]), "INSERT audit log not found for User"
+        assert verify_audit_history("users", test_user_id, ["INSERT"]), "INSERT audit log not found for User"
         print("INSERT audit log verified for User")
         
         # Update the user
@@ -192,7 +277,7 @@ def test_user_audit_trail():
         
         # Verify UPDATE audit log
         print("\nVerifying UPDATE audit log for User...")
-        assert verify_audit_history("users", user_id, ["INSERT", "UPDATE"]), "UPDATE audit log not found for User"
+        assert verify_audit_history("users", test_user_id, ["INSERT", "UPDATE"]), "UPDATE audit log not found for User"
         print("UPDATE audit log verified for User")
         
         # Deactivate the user (soft delete)
@@ -203,7 +288,7 @@ def test_user_audit_trail():
         
         # Verify another UPDATE audit log for deactivation
         print("\nVerifying UPDATE audit log for User deactivation...")
-        assert verify_audit_history("users", user_id, ["INSERT", "UPDATE", "UPDATE"]), "UPDATE audit log not found for User deactivation"
+        assert verify_audit_history("users", test_user_id, ["INSERT", "UPDATE", "UPDATE"]), "UPDATE audit log not found for User deactivation"
         print("UPDATE audit log verified for User deactivation")
         
         print("\nUser audit trail tests passed")
@@ -226,10 +311,8 @@ def test_supplier_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test supplier
         print("\nCreating a test supplier...")
@@ -291,10 +374,8 @@ def test_party_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test party
         print("\nCreating a test party...")
@@ -356,10 +437,8 @@ def test_bank_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test bank
         print("\nCreating a test bank...")
@@ -420,10 +499,8 @@ def test_transporter_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test transporter
         print("\nCreating a test transporter...")
@@ -484,10 +561,8 @@ def test_item_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test supplier for the item
         print("\nCreating a test supplier for the item...")
@@ -563,15 +638,14 @@ def test_register_entry_audit_trail():
     cleanup_list = []
     
     try:
-        # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        # Use the fixed test user for operations
+        user_id = FIXED_TEST_USER_ID
+        print(f"Using fixed test user with ID: {user_id}")
         
         # Create a test supplier
         print("\nCreating a test supplier...")
         supplier_input = {
-            'name': TEST_SUPPLIER_NAME,
+            'name': f"reg_supplier_{uuid.uuid4().hex[:8]}",  # Use a unique name to avoid conflicts
             'address': TEST_SUPPLIER_ADDRESS,
             'phone_number': TEST_SUPPLIER_PHONE
         }
@@ -585,7 +659,7 @@ def test_register_entry_audit_trail():
         # Create a test party
         print("\nCreating a test party...")
         party_input = {
-            'name': TEST_PARTY_NAME,
+            'name': f"reg_party_{uuid.uuid4().hex[:8]}",  # Use a unique name to avoid conflicts
             'address': TEST_PARTY_ADDRESS,
             'phone_number': TEST_PARTY_PHONE
         }
@@ -606,6 +680,7 @@ def test_register_entry_audit_trail():
             'register_date': YESTERDAY
         }
         register_entry_result = RegisterEntry.insert(bill_input, get_cls=True)
+        breakpoint()
         assert register_entry_result['status'] == 'okay', f"RegisterEntry creation failed: {register_entry_result.get('message', 'Unknown error')}"
         test_register_entry = register_entry_result['class']
         register_entry_id = test_register_entry.get_id()
@@ -659,9 +734,7 @@ def test_memo_entry_audit_trail():
     
     try:
         # Create a test user
-        test_user, user_cleanup = create_test_user()
-        cleanup_list.extend(user_cleanup)
-        user_id = test_user.id
+        user_id = FIXED_TEST_USER_ID
         
         # Create a test supplier
         print("\nCreating a test supplier...")
@@ -750,28 +823,36 @@ def test_memo_entry_audit_trail():
 
 def run_all_tests():
     """Run all test functions and print results."""
-    test_functions = [
-        test_user_audit_trail,
-        # test_supplier_audit_trail,
-        # test_party_audit_trail,
-        # test_bank_audit_trail,
-        # test_transporter_audit_trail,
-        # test_item_audit_trail,
-        # test_register_entry_audit_trail,
-        # test_memo_entry_audit_trail,
-    ]
+    # Setup the fixed test user
+    setup_fixed_test_user()
     
-    results = {}
-    for test_func in test_functions:
-        print(f"\nRunning {test_func.__name__}...")
-        result = test_func()
-        results[test_func.__name__] = result
+    # Patch execute_query to use the fixed test user
+    patch_execute_query()
     
-    print("\nTest results:")
-    for test_name, result in results.items():
-        print(f"{test_name}: {'Passed' if result else 'Failed'}")
-    
-    print("\nAudit trail tests completed")
+    try:
+        test_functions = [
+
+            # test_supplier_audit_trail,
+            # test_party_audit_trail,
+            # test_bank_audit_trail,
+            test_register_entry_audit_trail,
+            # test_memo_entry_audit_trail,
+        ]
+        
+        results = {}
+        for test_func in test_functions:
+            print(f"\nRunning {test_func.__name__}...")
+            result = test_func()
+            results[test_func.__name__] = result
+        
+        print("\nTest results:")
+        for test_name, result in results.items():
+            print(f"{test_name}: {'Passed' if result else 'Failed'}")
+        
+        print("\nAudit trail tests completed")
+    finally:
+        # Restore the original execute_query
+        restore_execute_query()
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
