@@ -105,7 +105,6 @@ def get_user_id_from_token():
         
         # Get all claims from the token
         claims = get_jwt()
-        
         # Return the user_id claim
         return claims.get('user_id')
     except Exception:
@@ -537,6 +536,8 @@ def search_audit_trail():
         }), 500
 
 @app.route(BASE + '/supplier_names_and_ids', methods=['GET'])
+@jwt_required()
+@permission_required('supplier', 'read')
 def get_all_supplier_names():
     """Retrieves all supplier names and IDs from the database and returns them in JSON format."""
     
@@ -547,6 +548,8 @@ def get_all_supplier_names():
     return json_data
 
 @app.route(BASE + '/party_names_and_ids', methods=['GET'])
+@jwt_required()
+@permission_required('party', 'read')
 def get_all_party_names():
     """Retrieves all party names and IDs from the database and returns them in JSON format."""
     data = retrieve_indivijual.get_all_names_ids('party')
@@ -554,6 +557,8 @@ def get_all_party_names():
     return json_data
 
 @app.route(BASE + '/bank_names_and_ids', methods=['GET'])
+@jwt_required()
+@permission_required('bank', 'read')
 def get_all_bank_names():
     """Retrieves all bank names and IDs from the database and returns them in JSON format."""
     data = retrieve_indivijual.get_all_names_ids('bank')
@@ -561,6 +566,8 @@ def get_all_bank_names():
     return json_data
 
 @app.route(BASE + '/credit/<int:supplier_id>/<int:party_id>', methods=['GET'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_credit(supplier_id: int, party_id: int):
     """Fetches pending credit details for the given supplier and party and returns the data in JSON format."""
     data = retrieve_credit.get_pending_part(supplier_id, party_id)
@@ -568,6 +575,8 @@ def get_credit(supplier_id: int, party_id: int):
     return json_data
 
 @app.route(BASE + '/pending_bills/<int:supplier_id>/<int:party_id>', methods=['GET'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_pending_bills(supplier_id: int, party_id: int):
     """Retrieves pending bill details for the specified supplier and party and returns them as JSON."""
     data = RegisterEntry.get_pending_bills(supplier_id, party_id)
@@ -575,6 +584,8 @@ def get_pending_bills(supplier_id: int, party_id: int):
     return json_data
 
 @app.route(BASE + '/create_report', methods=['POST'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def create_report():
     """Creates a report from POST data by invoking report_select.make_report and returns the report as JSON."""
     if request.method == 'POST':
@@ -584,20 +595,62 @@ def create_report():
     return {'status': 'okay'}
 
 @app.route(BASE + '/add/individual', methods=['POST'])
+@jwt_required()
 def add_individual():
     """Inserts an individual (supplier, party, bank, or transporter) into the database using provided JSON data."""
     data = request.json
     entity_mapping = {'supplier': Supplier, 'party': Party, 'bank': Bank, 'transport': Transporter}
-    return entity_mapping[data['entity']].insert(data)
+    
+    # Check permission based on entity type
+    entity_type = data.get('entity')
+    if not entity_type or entity_type not in entity_mapping:
+        return jsonify({'status': 'error', 'message': 'Invalid entity type'}), 400
+    
+    # Verify JWT is present
+    verify_jwt_in_request()
+    
+    # Get current user
+    current_user = get_current_user()
+    
+    # Check if user has permission
+    if not current_user or not current_user.has_permission(entity_type, 'create'):
+        return jsonify({
+            'status': 'error',
+            'message': 'Permission denied'
+        }), 403
+    
+    return entity_mapping[entity_type].insert(data)
 
 @app.route(BASE + '/add/entry', methods=['POST'])
+@jwt_required()
 def add_entry():
     """Inserts an entry (register, memo, order form, item, or item entry) into the database using provided JSON data."""
     data = request.json
     entity_mapping = {'register_entry': RegisterEntry, 'memo_entry': MemoEntry, 'order_form': OrderForm, 'item': Item, 'item_entry': ItemEntry}
-    return entity_mapping[data['entity']].insert(data)
+    
+    # Check permission based on entity type
+    entity_type = data.get('entity')
+    if not entity_type or entity_type not in entity_mapping:
+        return jsonify({'status': 'error', 'message': 'Invalid entity type'}), 400
+    
+    # Verify JWT is present
+    verify_jwt_in_request()
+    
+    # Get current user
+    current_user = get_current_user()
+    
+    # Check if user has permission
+    if not current_user or not current_user.has_permission(entity_type, 'create'):
+        return jsonify({
+            'status': 'error',
+            'message': 'Permission denied'
+        }), 403
+    
+    return entity_mapping[entity_type].insert(data)
 
 @app.route(BASE + '/add/register_entry', methods=['POST'])
+@jwt_required()
+@permission_required('register_entry', 'create')
 def add_register_entry():
     """Inserts a register entry into the database using POST data and returns the insertion result."""
 
@@ -606,6 +659,8 @@ def add_register_entry():
     return jsonify(response)
 
 @app.route(BASE + '/add/memo_entry', methods=['POST'])
+@jwt_required()
+@permission_required('memo_entry', 'create')
 def add_memo_entry():
     """Inserts a memo entry into the database using POST data and returns the insertion result."""
     data = request.json
@@ -613,6 +668,8 @@ def add_memo_entry():
     return jsonify(response)
 
 @app.route(BASE + '/add/order_form', methods=['POST'])
+@jwt_required()
+@permission_required('order_form', 'create')
 def add_order_form_entry():
     """Inserts an order form entry into the database using POST data and returns the insertion result."""
     data = request.json
@@ -620,6 +677,8 @@ def add_order_form_entry():
     return jsonify(response)
 
 @app.route(BASE + '/add_legacy')
+@jwt_required()
+@permission_required('supplier', 'create')
 def add_legacy():
     """Triggers legacy data insertion routines for suppliers and parties."""
     add_suppliers.add()
@@ -627,22 +686,70 @@ def add_legacy():
     return {'status': 'okay'}
 
 @app.route(BASE + '/get_all', methods=['POST'])
+@jwt_required()
 def get_all():
     """Retrieves all records from a specified table using provided parameters and returns them in JSON format."""
     if request.method == 'POST':
         data = request.json
+        
+        # Check permission based on table name
+        table_name = data.get('table_name')
+        if not table_name:
+            return jsonify({'status': 'error', 'message': 'Missing table_name parameter'}), 400
+        
+        # Verify JWT is present
+        verify_jwt_in_request()
+        
+        # Get current user
+        current_user = get_current_user()
+        
+        # Check if user has permission
+        if not current_user or not current_user.has_permission(table_name, 'read'):
+            return jsonify({
+                'status': 'error',
+                'message': 'Permission denied'
+            }), 403
+        
         return json.dumps(retrieve_all.get_all(**data), cls=CustomEncoder)
 
 @app.route(BASE + '/get_by_id/<string:table_name>/<int:id>')
+@jwt_required()
 def get_id(table_name: str, id: int):
     """Fetches a record by ID from a specified table and returns the data in JSON format."""
+    # Verify JWT is present
+    verify_jwt_in_request()
+    
+    # Get current user
+    current_user = get_current_user()
+    
+    # Check if user has permission
+    if not current_user or not current_user.has_permission(table_name, 'read'):
+        return jsonify({
+            'status': 'error',
+            'message': 'Permission denied'
+        }), 403
+    
     data = retrieve_from_id.get_from_id(table_name, id)
     return json.dumps(data)
 
 @app.route(BASE + '/update/<string:table_name>', methods=['POST'])
+@jwt_required()
 def update_id(table_name: str):
     """Updates a record in a specified table with provided data and returns the update status in JSON."""
     if request.method == 'POST':
+        # Verify JWT is present
+        verify_jwt_in_request()
+        
+        # Get current user
+        current_user = get_current_user()
+        
+        # Check if user has permission
+        if not current_user or not current_user.has_permission(table_name, 'update'):
+            return jsonify({
+                'status': 'error',
+                'message': 'Permission denied'
+            }), 403
+        
         data = request.json
         cls = table_class_mapper(table_name)
         instance = cls.from_dict(data)
@@ -650,9 +757,23 @@ def update_id(table_name: str):
         return jsonify(r_val)
 
 @app.route(BASE + '/delete/<string:table_name>', methods=['POST'])
+@jwt_required()
 def delete(table_name: str):
     """Deletes a record from a specified table based on POST data and returns the deletion status."""
     if request.method == 'POST':
+        # Verify JWT is present
+        verify_jwt_in_request()
+        
+        # Get current user
+        current_user = get_current_user()
+        
+        # Check if user has permission
+        if not current_user or not current_user.has_permission(table_name, 'delete'):
+            return jsonify({
+                'status': 'error',
+                'message': 'Permission denied'
+            }), 403
+        
         data = request.json
         cls = table_class_mapper(table_name)
         instance = cls.from_dict(data, parse_memo_bills=True)
@@ -661,12 +782,16 @@ def delete(table_name: str):
     raise DataError('Only POST requests are allowed on this /delete')
 
 @app.route(BASE + '/get_memo_bills/<int:id>')
+@jwt_required()
+@permission_required('memo_entry', 'read')
 def get_memo_bills(id: int):
     """Retrieves memo bills for a given ID and returns them in JSON format."""
     data = MemoEntry.get_memo_bills_by_id(id)
     return json.dumps(data)
 
 @app.route(BASE + '/backup', methods=['GET'])
+@jwt_required()
+@permission_required('users', 'create')  # Using admin-level permission for backup
 def backup_data():
     """Creates a backup of the PostgreSQL database using pg_dump and returns the backup status."""
     current_date = datetime.now()
@@ -679,6 +804,8 @@ def backup_data():
     return backup.backup_postgresql_database(user, dbname, password, backup_file_path)
 
 @app.route(BASE + '/parse_register_entry', methods=['POST'])
+@jwt_required()
+@permission_required('register_entry', 'create')
 def parse_register_entry_route():
     """Parse and optionally queue a register entry image."""
     try:
@@ -703,6 +830,8 @@ def parse_register_entry_route():
         return (jsonify({'status': 'error', 'message': f'Error processing image: {str(e)}'}), 500)
 
 @app.route(BASE + '/get_next_ocr_entry', methods=['GET'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_next_ocr_entry():
     """Get next pending OCR entry."""
     try:
@@ -718,6 +847,8 @@ def get_next_ocr_entry():
         return (jsonify({'status': 'error', 'message': f'Error retrieving entry: {str(e)}'}), 500)
 
 @app.route(BASE + '/mark_ocr_complete', methods=['POST'])
+@jwt_required()
+@permission_required('register_entry', 'update')
 def mark_ocr_complete():
     """Mark OCR entry as processed."""
     try:
@@ -731,6 +862,8 @@ def mark_ocr_complete():
         return (jsonify({'status': 'error', 'message': str(e)}), 500)
 
 @app.route(BASE + '/queue_status', methods=['GET'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_queue_status():
     """Get OCR queue statistics."""
     try:
@@ -740,6 +873,8 @@ def get_queue_status():
         return (jsonify({'status': 'error', 'message': str(e)}), 500)
 
 @app.route(BASE + '/update_name_mapping', methods=['POST'])
+@jwt_required()
+@permission_required('supplier', 'update')
 def update_name_mapping():
     """Update the name mapping cache with human corrections."""
     try:
@@ -757,14 +892,30 @@ def update_name_mapping():
         return (jsonify({'status': 'error', 'message': f'Error updating name mapping: {str(e)}'}), 500)
 
 @app.route(BASE + '/fix_problems')
+@jwt_required()
+@permission_required('register_entry', 'update')
 def fix():
     """Executes fix routines for register entries and returns a status message."""
     update_register_entry.fix_problems()
     return {'status': 'okay'}
 
 @app.route(BASE + '/v2/get_by_id/<string:table_name>/<int:id>')
+@jwt_required()
 def get_id_v2(table_name: str, id: int):
     """Fetches a record by ID from a specified table and returns the data in JSON format with proper datetime handling."""
+    # Verify JWT is present
+    verify_jwt_in_request()
+    
+    # Get current user
+    current_user = get_current_user()
+    
+    # Check if user has permission
+    if not current_user or not current_user.has_permission(table_name, 'read'):
+        return jsonify({
+            'status': 'error',
+            'message': 'Permission denied'
+        }), 403
+    
     data = retrieve_from_id.get_from_id(table_name, id)
     # Extract the first (and should be only) item from the result array
     if data and len(data) > 0:
@@ -772,6 +923,8 @@ def get_id_v2(table_name: str, id: int):
     return json.dumps({}, cls=CustomEncoder)  # Return empty object if no data found
 
 @app.route(BASE + '/v2/get_register_entry/<int:id>')
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_register_entry_v2(id: int):
     """Fetches a register entry with all related data including item entries."""
     try:
@@ -844,6 +997,8 @@ def get_register_entry_v2(id: int):
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route(BASE + '/v2/get_memo_entry/<int:id>')
+@jwt_required()
+@permission_required('memo_entry', 'read')
 def get_memo_entry_v2(id: int):
     """Fetches a memo entry with all related data including payments and memo bills."""
     try:
@@ -869,6 +1024,8 @@ def get_memo_entry_v2(id: int):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route(BASE + '/memo_entries_with_dalali', methods=['GET'])
+@jwt_required()
+@permission_required('memo_entry', 'read')
 def get_memo_entries_with_dalali():
     """Retrieves memo entries with dalali payment information, optionally filtered by date range."""
     try:
@@ -883,6 +1040,8 @@ def get_memo_entries_with_dalali():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route(BASE + '/update_memo_dalali', methods=['POST'])
+@jwt_required()
+@permission_required('memo_entry', 'update')
 def update_memo_dalali_payment():
     """Updates dalali payment information for a memo entry."""
     if request.method == 'POST':
@@ -910,6 +1069,7 @@ def update_memo_dalali_payment():
     return jsonify({'status': 'error', 'message': 'Only POST requests are allowed'}), 405
 
 @app.route(BASE + '/search', methods=['POST'])
+@jwt_required()
 def search():
     """Search for entities that match the provided search query."""
     if request.method == 'POST':
@@ -920,6 +1080,19 @@ def search():
             
         table_name = data['table_name']
         search_query = data['search']
+        
+        # Verify JWT is present
+        verify_jwt_in_request()
+        
+        # Get current user
+        current_user = get_current_user()
+        
+        # Check if user has permission
+        if not current_user or not current_user.has_permission(table_name, 'read'):
+            return jsonify({
+                'status': 'error',
+                'message': 'Permission denied'
+            }), 403
         
         # Remove these keys so they don't interfere with additional filters
         search_data = {k: v for k, v in data.items() if k not in ['table_name', 'search']}
@@ -933,6 +1106,8 @@ def search():
 
 
 @app.route(BASE + '/v2/get_all_register_entries', methods=['GET'])
+@jwt_required()
+@permission_required('register_entry', 'read')
 def get_all_register_entries_with_names():
     """Retrieves all register entries with supplier and party names."""
     try:
@@ -970,6 +1145,8 @@ def get_all_register_entries_with_names():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route(BASE + '/v2/get_all_memo_entries', methods=['GET'])
+@jwt_required()
+@permission_required('memo_entry', 'read')
 def get_all_memo_entries_with_names():
     """Retrieves all memo entries with supplier and party names."""
     try:
