@@ -1,4 +1,4 @@
--- Original tables and sequences
+-- Original tables and sequences with audit fields
 CREATE SEQUENCE supplier_seq;
 
 CREATE TABLE supplier (
@@ -8,7 +8,11 @@ CREATE TABLE supplier (
     phone_number VARCHAR(20),
     city VARCHAR(20) CHECK (city IN ('Bangalore', 'Jaipur', 'Kolkata', 'Surat', 'Varanasi', 'Belgaum', 'Mumbai', 'Delhi', 'Mau')),
     UNIQUE (name),
-    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE SEQUENCE party_seq;
@@ -19,7 +23,11 @@ CREATE TABLE party (
     address VARCHAR(300),
     phone_number VARCHAR(20),
     UNIQUE (name),
-    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE SEQUENCE bank_seq;
@@ -30,7 +38,11 @@ CREATE TABLE bank (
     address VARCHAR(300),
     phone_number VARCHAR(20),
     UNIQUE (name),
-    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE SEQUENCE Transport_seq;
@@ -41,7 +53,11 @@ CREATE TABLE Transport (
     address VARCHAR(300),
     phone_number VARCHAR(20),
     UNIQUE (name),
-    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP 
+    last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE SEQUENCE register_entry_seq;
@@ -59,6 +75,10 @@ CREATE TABLE register_entry (
     partial_amount INT DEFAULT 0,
     UNIQUE (bill_number, supplier_id, party_id, register_date),
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (party_id) REFERENCES party(id),
     FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 );
@@ -76,6 +96,10 @@ CREATE TABLE memo_entry(
     deduction INT default 0,
     UNIQUE (memo_number, party_id, supplier_id, register_date),
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (party_id) REFERENCES party(id),
     FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 );
@@ -88,6 +112,10 @@ CREATE TABLE memo_payments(
     bank_id INT,
     cheque_number INT,
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
     FOREIGN KEY (bank_id) REFERENCES bank(id)
 );
@@ -101,6 +129,10 @@ CREATE TABLE memo_bills (
     type VARCHAR(2),
     amount INT,
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
     FOREIGN KEY (bill_id) REFERENCES register_entry(id)
 );
@@ -115,6 +147,10 @@ CREATE TABLE part_payments(
     used boolean DEFAULT false,
     use_memo_id INT,
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (party_id) REFERENCES party(id),
     FOREIGN KEY (supplier_id) REFERENCES supplier(id),
     FOREIGN KEY (memo_id) REFERENCES memo_entry(id),
@@ -132,6 +168,10 @@ CREATE TABLE order_form(
     status VARCHAR,
     delivered boolean DEFAULT false,
     last_update TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (party_id) REFERENCES party(id),
     FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 );
@@ -144,6 +184,10 @@ CREATE TABLE item (
     name VARCHAR(255) NOT NULL,
     color VARCHAR(255) DEFAULT 'N/A',
     UNIQUE (supplier_id, name, color),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (supplier_id) REFERENCES supplier(id)
 );
 
@@ -156,6 +200,10 @@ CREATE TABLE item_entry (
     quantity INT,
     rate INT,
     UNIQUE(register_entry_id, item_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
     FOREIGN KEY (register_entry_id) REFERENCES register_entry(id),
     FOREIGN KEY (item_id) REFERENCES item(id)
 );
@@ -167,17 +215,29 @@ CREATE TABLE remote_query_logs (
     query_text TEXT NOT NULL,
     http_response_status INTEGER,
     query_status VARCHAR(100),
-    message TEXT
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE TABLE last_update(
-    updated_at TIMESTAMP(0)
+    updated_at TIMESTAMP(0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE TABLE stack(
     query VARCHAR(500),
     val VARCHAR(500),
-    updated_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 -- Audit trail schema
@@ -204,7 +264,11 @@ CREATE TABLE IF NOT EXISTS permissions (
     can_read BOOLEAN DEFAULT TRUE,
     can_update BOOLEAN DEFAULT FALSE,
     can_delete BOOLEAN DEFAULT FALSE,
-    UNIQUE(role, resource)
+    UNIQUE(role, resource),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT
 );
 
 CREATE SEQUENCE IF NOT EXISTS audit_log_seq;
@@ -219,77 +283,39 @@ CREATE TABLE IF NOT EXISTS audit_log (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Function to add audit fields to existing tables
-DO $$
-DECLARE
-    table_rec RECORD;
-BEGIN
-    FOR table_rec IN 
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-          AND table_type = 'BASE TABLE'
-          AND table_name NOT IN ('users', 'permissions', 'audit_log')
-    LOOP
-        -- Check if created_at column exists
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-              AND table_name = table_rec.table_name 
-              AND column_name = 'created_at'
-        ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
-        END IF;
-        
-        -- Check if created_by column exists
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-              AND table_name = table_rec.table_name 
-              AND column_name = 'created_by'
-        ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN created_by BIGINT', table_rec.table_name);
-        END IF;
-        
-        -- Check if last_updated column exists
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-              AND table_name = table_rec.table_name 
-              AND column_name = 'last_updated'
-        ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP', table_rec.table_name);
-        END IF;
-        
-        -- Check if last_updated_by column exists
-        IF NOT EXISTS (
-            SELECT 1 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' 
-              AND table_name = table_rec.table_name 
-              AND column_name = 'last_updated_by'
-        ) THEN
-            EXECUTE format('ALTER TABLE %I ADD COLUMN last_updated_by BIGINT', table_rec.table_name);
-        END IF;
-        
-        -- Add foreign key constraint for created_by with exception handling
-        BEGIN
-            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT fk_%I_created_by FOREIGN KEY (created_by) REFERENCES users(id)', table_rec.table_name, table_rec.table_name);
-        EXCEPTION
-            WHEN duplicate_object THEN NULL;
-        END;
-
-        -- Add foreign key constraint for last_updated_by with exception handling
-        BEGIN
-            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT fk_%I_last_updated_by FOREIGN KEY (last_updated_by) REFERENCES users(id)', table_rec.table_name, table_rec.table_name);
-        EXCEPTION
-            WHEN duplicate_object THEN NULL;
-        END;
-    END LOOP;
-END $$;
+-- Add foreign key constraints for audit fields
+ALTER TABLE supplier ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE supplier ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE party ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE party ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE bank ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE bank ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE Transport ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE Transport ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE register_entry ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE register_entry ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE memo_entry ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE memo_entry ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE memo_payments ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE memo_payments ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE memo_bills ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE memo_bills ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE part_payments ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE part_payments ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE order_form ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE order_form ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE item ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE item ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE item_entry ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE item_entry ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE remote_query_logs ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE remote_query_logs ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE last_update ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE last_update ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE stack ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE stack ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
+ALTER TABLE permissions ADD FOREIGN KEY (created_by) REFERENCES users(id);
+ALTER TABLE permissions ADD FOREIGN KEY (last_updated_by) REFERENCES users(id);
 
 -- Memo dalali payments table
 CREATE TABLE IF NOT EXISTS memo_dalali_payments (
@@ -299,7 +325,13 @@ CREATE TABLE IF NOT EXISTS memo_dalali_payments (
     paid_amount NUMERIC(10, 2) DEFAULT 0,
     remark TEXT,
     last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(memo_id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_updated_by BIGINT,
+    UNIQUE(memo_id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (last_updated_by) REFERENCES users(id)
 );
 
 -- Default admin user
