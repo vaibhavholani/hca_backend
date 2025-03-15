@@ -99,5 +99,6 @@ def insert_register_entry(entry) -> None:
 
     # Get the raw SQL query and parameters from the Pypika query
     sql = insert_query.get_sql()
+
     # Execute the query
     return execute_query(sql)

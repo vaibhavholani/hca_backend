@@ -171,3 +171,9 @@ test_pypika.py
 
 # misc file
 zzz*
+
+# ignore logs folder
+logs
+
+# ignore local_scripts folder
+local_scripts

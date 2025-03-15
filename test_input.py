@@ -9,11 +9,11 @@ from Entities import RegisterEntry, MemoEntry, OrderForm, Item, ItemEntry
 from Tests import TestKhataReport
 from Reports import make_report
 from Tests import check_status_and_return_class, cleanup, print_dict_diff
-TEST_SUPPLIER_NAME = 'test_sppli42334'
-TEST_PARTY_NAME = 'test_par4343'
+TEST_SUPPLIER_NAME = 'test_sspli4334'
+TEST_PARTY_NAME = 'test_ppr433'
 TEST_BILL_NUMBER = '123456'
-TEST_MEMO_NUMBER1 = 2217766
-TEST_MEMO_NUMBER2 = 3470334
+TEST_MEMO_NUMBER1 = 22776
+TEST_MEMO_NUMBER2 = 37034
 TODAY = datetime.now().date()
 BILL_DATE = (TODAY - timedelta(days=180)).strftime('%Y-%m-%d')
 ORDER_FORM_DATE = (TODAY - timedelta(days=182)).strftime('%Y-%m-%d')
@@ -92,6 +92,7 @@ def run_basic_test():
             bill_amount = 5000
             bill_input = {'bill_number': TEST_BILL_NUMBER, 'amount': bill_amount, 'supplier_id': test_supplier_id, 'party_id': test_party_id, 'register_date': BILL_DATE}
             register_entry = check_status_and_return_class(RegisterEntry.insert(bill_input, get_cls=True))
+
             cleanup_list.append(register_entry)
             register_entry = RegisterEntry.retrieve(test_supplier_id, test_party_id, TEST_BILL_NUMBER, BILL_DATE)
             register_entry_id = register_entry.get_id()
