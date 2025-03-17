@@ -992,7 +992,7 @@ def get_register_entry_v2(id: int):
             print(f"Error fetching memo bills: {str(e)}")
             register_entry_data['memo_bills'] = []
         
-        return jsonify(register_entry_data)
+        return json.dumps(register_entry_data, cls=CustomEncoder)
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
