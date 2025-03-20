@@ -157,13 +157,14 @@ def get_memo_entry(memo_id: int) -> Dict:
         part_payments_data = execute_query(select_query.get_sql())['result']
         
         # Create a list of dictionaries with memo_id, memo_number, and amount
-        part_payments = [
+        part_details = [
             {
                 'memo_id': p['memo_id'],
                 'memo_number': p['memo_number'],
                 'amount': p['amount']
             } for p in part_payments_data
         ]
+        part_payments = [p['memo_id'] for p in part_details]
     
     # Parse JSON fields
     import json
@@ -206,6 +207,7 @@ def get_memo_entry(memo_id: int) -> Dict:
     
     if part_payments:
         result['selected_part'] = part_payments
+        result['part_details'] = part_details
     
     return result
 
