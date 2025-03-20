@@ -421,4 +421,48 @@ The memo entry retrieval functions have been updated to support the enhanced dat
 1. Test the updated functions with existing and new memo entries
 2. Update frontend components to utilize the new fields
 3. Consider adding validation for the new fields in insert and update functions
-g
+
+## Updated Test Input for Memo Entry
+
+**Date:** March 20 2025
+
+### End Goal
+Update the test_input.py file to include the new fields added to the memo_entry and memo_payments tables, ensuring that tests properly validate the enhanced memo entry functionality.
+
+### Completed Steps
+
+1. **Updated Part Memo Input**
+   - Added new fields to the partial payment memo test:
+     - discount, other_deduction, rate_difference (all set to 0 for partial payment)
+     - less_details structure with empty detail lists for each deduction type
+     - notes array with a test note
+   - Updated payment object to include the amount field
+
+2. **Updated Full Memo Input**
+   - Split the existing deduction value into three new fields:
+     - discount (100)
+     - rate_difference (100)
+     - other_deduction (calculated to maintain the original deduction total)
+   - Added less_details structure with descriptive notes for each deduction type
+   - Added notes array with a test note
+   - Updated payment object to include the amount field
+
+3. **Maintained Math Integrity**
+   - Ensured that the sum of discount, rate_difference, and other_deduction equals the original deduction value
+   - Maintained the overall payment calculation logic to ensure tests continue to pass
+
+### Current Progress
+The test_input.py file has been updated to include the new memo entry fields. The tests now create memo entries with the enhanced data format, allowing for proper validation of the memo entry upgrade functionality.
+
+### Files Modified
+- `hca_backend/test_input.py`
+
+### Backend Information
+- **Test Data**: Now includes all new fields (discount, other_deduction, rate_difference, less_details, notes)
+- **Payment Objects**: Now include the amount field
+- **Deduction Breakdown**: Original deduction value is now split into three specific deduction types
+
+### Next Steps
+1. Run the updated tests to verify they pass with the new fields
+2. Consider adding additional test cases for edge cases with the new fields
+3. Update any other test files that create memo entries to include the new fields
