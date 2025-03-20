@@ -143,11 +143,27 @@ def get_memo_entry(memo_id: int) -> Dict:
     # Get part payments if full mode
     part_payments = []
     if mode == 'Full':
+        # Join with memo_entry to get memo_number and amount
         select_query = Query.from_(part_payments_table)\
-            .select('*')\
+            .join(memo_entry_table.as_('me')).on(part_payments_table.memo_id == memo_entry_table.as_('me').id)\
+            .select(
+                part_payments_table.id,
+                part_payments_table.memo_id,
+                memo_entry_table.as_('me').memo_number,
+                memo_entry_table.as_('me').amount
+            )\
             .where(part_payments_table.use_memo_id == memo_id)
+        
         part_payments_data = execute_query(select_query.get_sql())['result']
-        part_payments = [p['memo_id'] for p in part_payments_data]
+        
+        # Create a list of dictionaries with memo_id, memo_number, and amount
+        part_payments = [
+            {
+                'memo_id': p['memo_id'],
+                'memo_number': p['memo_number'],
+                'amount': p['amount']
+            } for p in part_payments_data
+        ]
     
     # Parse JSON fields
     import json
