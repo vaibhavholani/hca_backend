@@ -12,8 +12,8 @@ from Tests import check_status_and_return_class, cleanup, print_dict_diff
 TEST_SUPPLIER_NAME = 'test_sspli4334'
 TEST_PARTY_NAME = 'test_ppr433'
 TEST_BILL_NUMBER = '123456'
-TEST_MEMO_NUMBER1 = 22776
-TEST_MEMO_NUMBER2 = 37034
+TEST_MEMO_NUMBER1 = 22707
+TEST_MEMO_NUMBER2 = 370315
 TODAY = datetime.now().date()
 BILL_DATE = (TODAY - timedelta(days=180)).strftime('%Y-%m-%d')
 ORDER_FORM_DATE = (TODAY - timedelta(days=182)).strftime('%Y-%m-%d')
