@@ -337,7 +337,7 @@ The infinite loop issue in the audit logging system has been fixed. The system n
 
 ## Implemented Audit Trail User Tracking
 
-**Date:** March 11, 2025
+**Date:** March 11 2025
 
 ### End Goal
 Fix the issue where the `created_by` and `last_updated_by` columns added by the audit trail schema were not being populated in database operations.
@@ -357,11 +357,11 @@ Fix the issue where the `created_by` and `last_updated_by` columns added by the 
 
 3. **Added Error Handling**
    - Implemented try-except blocks to catch and handle any errors during query modification
-   - Added fallback to return the original query if modification fails, ensuring system stability
+   - Added fallback to return the original query if modification fails ensuring system stability
    - Added logging for any errors that occur during query modification
 
 ### Current Progress
-The issue has been fixed, and the `created_by` and `last_updated_by` columns are now being properly populated in all database operations. This ensures that the audit trail system can track not only what changes were made and when, but also who made those changes.
+The issue has been fixed and the `created_by` and `last_updated_by` columns are now being properly populated in all database operations. This ensures that the audit trail system can track not only what changes were made and when but also who made those changes.
 
 ### Files Modified
 - `psql/db_connector.py`
@@ -373,5 +373,52 @@ The issue has been fixed, and the `created_by` and `last_updated_by` columns are
 
 ### Next Steps
 1. Test the implementation with various query types and formats
-2. Consider adding support for other SQL query formats (e.g., INSERT ... SELECT)
+2. Consider adding support for other SQL query formats (e.g. INSERT ... SELECT)
 3. Update documentation to reflect the changes
+
+## Updated Memo Entry Retrieval Functions
+
+**Date:** March 20 2025
+
+### End Goal
+Update the memo entry retrieval functions to support the enhanced data format with new fields added to the memo_entry and memo_payments tables.
+
+### Completed Steps
+
+1. **Updated `get_memo_entry` Function**
+   - Modified the payment query to include the `amount` field from memo_payments table
+   - Added a helper function `parse_json_field` to parse JSON strings from the database
+   - Enhanced the result structure to include new fields:
+     - discount, other_deduction, rate_difference
+     - less_details with gr_amount, discount, other_deduction, rate_difference details
+     - notes array
+
+2. **Updated `get_all_memo_entries_with_names` Function**
+   - Modified the payment query to include the `amount` field
+   - Added proper formatting for payment objects to include the amount
+   - Enhanced each entry with the new fields:
+     - discount, other_deduction, rate_difference
+     - less_details structure with detail lists
+     - notes array
+
+3. **Maintained Backward Compatibility**
+   - Kept existing fields in the response structure
+   - Used default values for new fields when not present in the database
+   - Ensured `get_all_memo_entries` function benefits from updates to `get_memo_entry`
+
+### Current Progress
+The memo entry retrieval functions have been updated to support the enhanced data format. The functions now return memo entries with additional fields as specified in the memo_entry_upgrade_summary.md document.
+
+### Files Modified
+- `API_Database/retrieve_memo_entry.py`
+
+### Backend Information
+- **New Fields**: discount, other_deduction, rate_difference, less_details, notes
+- **JSON Parsing**: Added helper function to parse JSON fields from the database
+- **Payment Amount**: Now included in payment objects
+
+### Next Steps
+1. Test the updated functions with existing and new memo entries
+2. Update frontend components to utilize the new fields
+3. Consider adding validation for the new fields in insert and update functions
+g
