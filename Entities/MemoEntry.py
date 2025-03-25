@@ -12,6 +12,7 @@ from .Entry import Entry
 from .MemoBill import MemoBill
 from API_Database import insert_memo_entry
 from API_Database import retrieve_memo_entry, get_memo_entry, get_memo_entry_id, get_memo_bills_by_id
+from API_Database import get_next_available_memo_number
 from API_Database import update_part_payment
 from API_Database import parse_date, sql_date, delete_memo_payments
 from Exceptions import DataError
@@ -165,6 +166,13 @@ class MemoEntry(Entry):
         Get the memo entry
         """
         return get_memo_entry(memo_id)
+
+    @staticmethod
+    def get_next_available_memo_number() -> int:
+        """
+        Get the next available memo number
+        """
+        return get_next_available_memo_number()
 
     @staticmethod
     def get_json(supplier_id: int, party_id: int, memo_number: int) -> Dict:

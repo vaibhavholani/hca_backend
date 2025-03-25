@@ -37,7 +37,7 @@ name_cache = NameMatchCache()
 app.config['JSON_SORT_KEYS'] = False
 app.config['JWT_SECRET_KEY'] = 'NHYd198vQNOBa9HrIAGEGNYrKHBegc9Z'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(hours=6)
 jwt = JWTManager(app)
 
 BASE = '/api'
@@ -1020,6 +1020,17 @@ def get_memo_entry_v2(id: int):
                         print(f"Error fetching register entry: {str(e)}")
         
         return json.dumps(memo_entry_data, cls=CustomEncoder)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route(BASE + '/v2/get_next_available_memo_number')
+@jwt_required()
+@permission_required('memo_entry', 'read')
+def get_next_available_memo_number():
+    """Retrieves the next available memo number."""
+    try:
+        memo_number = MemoEntry.get_next_available_memo_number()
+        return jsonify({'status': 'okay', "memo_number": memo_number})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 

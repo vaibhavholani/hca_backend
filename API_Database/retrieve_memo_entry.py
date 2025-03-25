@@ -37,6 +37,17 @@ def check_add_memo(memo_number: int, memo_date: str) -> bool:
         return True
     return False
 
+
+def get_next_available_memo_number() -> int:
+    """
+    Get the next available memo number
+    """
+    query = 'select memo_number from memo_entry order by memo_number DESC;'
+    response = execute_query(query)
+    if len(response['result']) == 0:
+        raise DataError('No Memo Entries Found, please contact Vaibhav')
+    return response['result'][0]['memo_number'] + 1
+
 def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
     """
     Get the memo_id using memo_number, supplier_id and party_id
