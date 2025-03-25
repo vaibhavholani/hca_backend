@@ -79,15 +79,21 @@ def get_memo_entry(memo_id: int) -> Dict:
     part_payments_table = Table('part_payments')
     supplier_table = Table('supplier')
     party_table = Table('party')
+    users_table = Table('users')
+    users_updated_table = Table('users').as_('users_updated')
     
     # Get memo entry data with supplier and party names
     select_query = Query.from_(memo_entry_table)\
         .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
         .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+        .left_join(users_table).on(memo_entry_table.created_by == users_table.id)\
+        .left_join(users_updated_table).on(memo_entry_table.last_updated_by == users_updated_table.id)\
         .select(
             memo_entry_table.star,
             supplier_table.name.as_('supplier_name'),
-            party_table.name.as_('party_name')
+            party_table.name.as_('party_name'),
+            users_table.full_name.as_('created_by_name'),
+            users_updated_table.full_name.as_('updated_by_name')
         )\
         .where(memo_entry_table.id == memo_id)
     
@@ -202,7 +208,11 @@ def get_memo_entry(memo_id: int) -> Dict:
             'other_deduction': parse_json_field(memo_data.get('other_deduction_details')),
             'rate_difference': parse_json_field(memo_data.get('rate_difference_details'))
         },
-        'notes': parse_json_field(memo_data.get('notes'))
+        'notes': parse_json_field(memo_data.get('notes')),
+        'created_by': memo_data.get('created_by'),
+        'created_by_name': memo_data.get('created_by_name', ''),
+        'last_updated_by': memo_data.get('last_updated_by'),
+        'updated_by_name': memo_data.get('updated_by_name', '')
     }
     
     if part_payments:
@@ -285,15 +295,21 @@ def get_all_memo_entries_with_names(page=None, page_size=None, filters=None) -> 
         memo_entry_table = Table('memo_entry')
         supplier_table = Table('supplier')
         party_table = Table('party')
+        users_table = Table('users')
+        users_updated_table = Table('users').as_('users_updated')
         
         # Build query with JOINs
         query = Query.from_(memo_entry_table)\
             .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
             .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+            .left_join(users_table).on(memo_entry_table.created_by == users_table.id)\
+            .left_join(users_updated_table).on(memo_entry_table.last_updated_by == users_updated_table.id)\
             .select(
                 memo_entry_table.star,
                 supplier_table.name.as_('supplier_name'),
-                party_table.name.as_('party_name')
+                party_table.name.as_('party_name'),
+                users_table.full_name.as_('created_by_name'),
+                users_updated_table.full_name.as_('updated_by_name')
             )
         
         # Apply filters if provided
@@ -406,6 +422,8 @@ def get_all_memo_entries_with_names(page=None, page_size=None, filters=None) -> 
                 'rate_difference': parse_json_field(entry.get('rate_difference_details'))
             }
             entry['notes'] = parse_json_field(entry.get('notes'))
+            entry['created_by_name'] = entry.get('created_by_name', '')
+            entry['updated_by_name'] = entry.get('updated_by_name', '')
         
         return {
             'status': 'okay', 
