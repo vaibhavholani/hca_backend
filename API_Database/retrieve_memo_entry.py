@@ -37,6 +37,17 @@ def check_add_memo(memo_number: int, memo_date: str) -> bool:
         return True
     return False
 
+
+def get_next_available_memo_number() -> int:
+    """
+    Get the next available memo number
+    """
+    query = 'select memo_number from memo_entry order by memo_number DESC;'
+    response = execute_query(query)
+    if len(response['result']) == 0:
+        raise DataError('No Memo Entries Found, please contact Vaibhav')
+    return response['result'][0]['memo_number'] + 1
+
 def get_memo_entry_id(supplier_id: int, party_id: int, memo_number: int) -> int:
     """
     Get the memo_id using memo_number, supplier_id and party_id
@@ -79,15 +90,21 @@ def get_memo_entry(memo_id: int) -> Dict:
     part_payments_table = Table('part_payments')
     supplier_table = Table('supplier')
     party_table = Table('party')
+    users_table = Table('users')
+    users_updated_table = Table('users').as_('users_updated')
     
     # Get memo entry data with supplier and party names
     select_query = Query.from_(memo_entry_table)\
         .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
         .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+        .left_join(users_table).on(memo_entry_table.created_by == users_table.id)\
+        .left_join(users_updated_table).on(memo_entry_table.last_updated_by == users_updated_table.id)\
         .select(
             memo_entry_table.star,
             supplier_table.name.as_('supplier_name'),
-            party_table.name.as_('party_name')
+            party_table.name.as_('party_name'),
+            users_table.full_name.as_('created_by_name'),
+            users_updated_table.full_name.as_('updated_by_name')
         )\
         .where(memo_entry_table.id == memo_id)
     
@@ -99,7 +116,8 @@ def get_memo_entry(memo_id: int) -> Dict:
         .select(
             memo_payments_table.bank_id,
             bank_table.name.as_('bank_name'),
-            memo_payments_table.cheque_number
+            memo_payments_table.cheque_number,
+            memo_payments_table.amount
         )\
         .where(memo_payments_table.memo_id == memo_id)
     
@@ -108,7 +126,8 @@ def get_memo_entry(memo_id: int) -> Dict:
         {
             'bank_id': p['bank_id'],
             'bank_name': p['bank_name'],
-            'cheque_number': p['cheque_number']
+            'cheque_number': p['cheque_number'],
+            'amount': p.get('amount', 0)
         }
         for p in payments_data
     ]
@@ -141,11 +160,39 @@ def get_memo_entry(memo_id: int) -> Dict:
     # Get part payments if full mode
     part_payments = []
     if mode == 'Full':
+        # Join with memo_entry to get memo_number and amount
         select_query = Query.from_(part_payments_table)\
-            .select('*')\
+            .join(memo_entry_table.as_('me')).on(part_payments_table.memo_id == memo_entry_table.as_('me').id)\
+            .select(
+                part_payments_table.id,
+                part_payments_table.memo_id,
+                memo_entry_table.as_('me').memo_number,
+                memo_entry_table.as_('me').amount
+            )\
             .where(part_payments_table.use_memo_id == memo_id)
+        
         part_payments_data = execute_query(select_query.get_sql())['result']
-        part_payments = [p['memo_id'] for p in part_payments_data]
+        
+        # Create a list of dictionaries with memo_id, memo_number, and amount
+        part_details = [
+            {
+                'memo_id': p['memo_id'],
+                'memo_number': p['memo_number'],
+                'amount': p['amount']
+            } for p in part_payments_data
+        ]
+        part_payments = [p['memo_id'] for p in part_details]
+    
+    # Parse JSON fields
+    import json
+    
+    def parse_json_field(field_value, default=None):
+        if not field_value:
+            return default or []
+        try:
+            return json.loads(field_value)
+        except:
+            return default or []
     
     # Construct result
     result = {
@@ -161,11 +208,27 @@ def get_memo_entry(memo_id: int) -> Dict:
         'register_date': sql_date(memo_data['register_date']),
         'mode': mode,
         'memo_bills': bills_data,
-        'payment': payments
+        'payment': payments,
+        # New fields
+        'discount': memo_data.get('discount', 0),
+        'other_deduction': memo_data.get('other_deduction', 0),
+        'rate_difference': memo_data.get('rate_difference', 0),
+        'less_details': {
+            'gr_amount': parse_json_field(memo_data.get('gr_amount_details')),
+            'discount': parse_json_field(memo_data.get('discount_details')),
+            'other_deduction': parse_json_field(memo_data.get('other_deduction_details')),
+            'rate_difference': parse_json_field(memo_data.get('rate_difference_details'))
+        },
+        'notes': parse_json_field(memo_data.get('notes')),
+        'created_by': memo_data.get('created_by'),
+        'created_by_name': memo_data.get('created_by_name', ''),
+        'last_updated_by': memo_data.get('last_updated_by'),
+        'updated_by_name': memo_data.get('updated_by_name', '')
     }
     
     if part_payments:
         result['selected_part'] = part_payments
+        result['part_details'] = part_details
     
     return result
 
@@ -243,15 +306,21 @@ def get_all_memo_entries_with_names(page=None, page_size=None, filters=None) -> 
         memo_entry_table = Table('memo_entry')
         supplier_table = Table('supplier')
         party_table = Table('party')
+        users_table = Table('users')
+        users_updated_table = Table('users').as_('users_updated')
         
         # Build query with JOINs
         query = Query.from_(memo_entry_table)\
             .left_join(supplier_table).on(memo_entry_table.supplier_id == supplier_table.id)\
             .left_join(party_table).on(memo_entry_table.party_id == party_table.id)\
+            .left_join(users_table).on(memo_entry_table.created_by == users_table.id)\
+            .left_join(users_updated_table).on(memo_entry_table.last_updated_by == users_updated_table.id)\
             .select(
                 memo_entry_table.star,
                 supplier_table.name.as_('supplier_name'),
-                party_table.name.as_('party_name')
+                party_table.name.as_('party_name'),
+                users_table.full_name.as_('created_by_name'),
+                users_updated_table.full_name.as_('updated_by_name')
             )
         
         # Apply filters if provided
@@ -321,12 +390,51 @@ def get_all_memo_entries_with_names(page=None, page_size=None, filters=None) -> 
                 .select(
                     memo_payments_table.bank_id,
                     bank_table.name.as_('bank_name'),
-                    memo_payments_table.cheque_number
+                    memo_payments_table.cheque_number,
+                    memo_payments_table.amount
                 )\
                 .where(memo_payments_table.memo_id == entry['id'])
             
             payments_result = execute_query(payments_query.get_sql())
-            entry['payment'] = payments_result['result'] if payments_result['status'] == 'okay' else []
+            
+            # Add amount to payment objects
+            if payments_result['status'] == 'okay':
+                entry['payment'] = [
+                    {
+                        'bank_id': p['bank_id'],
+                        'bank_name': p['bank_name'],
+                        'cheque_number': p['cheque_number'],
+                        'amount': p.get('amount', 0)
+                    }
+                    for p in payments_result['result']
+                ]
+            else:
+                entry['payment'] = []
+                
+            # Parse JSON fields
+            import json
+            
+            def parse_json_field(field_value, default=None):
+                if not field_value:
+                    return default or []
+                try:
+                    return json.loads(field_value)
+                except:
+                    return default or []
+            
+            # Add new fields
+            entry['discount'] = entry.get('discount', 0)
+            entry['other_deduction'] = entry.get('other_deduction', 0)
+            entry['rate_difference'] = entry.get('rate_difference', 0)
+            entry['less_details'] = {
+                'gr_amount': parse_json_field(entry.get('gr_amount_details')),
+                'discount': parse_json_field(entry.get('discount_details')),
+                'other_deduction': parse_json_field(entry.get('other_deduction_details')),
+                'rate_difference': parse_json_field(entry.get('rate_difference_details'))
+            }
+            entry['notes'] = parse_json_field(entry.get('notes'))
+            entry['created_by_name'] = entry.get('created_by_name', '')
+            entry['updated_by_name'] = entry.get('updated_by_name', '')
         
         return {
             'status': 'okay', 

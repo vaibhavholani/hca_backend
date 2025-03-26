@@ -2,6 +2,7 @@ from __future__ import annotations
 from psql import db_connector, execute_query
 from API_Database import retrieve_memo_entry
 import datetime
+import json
 from typing import Dict
 from Entities import MemoEntry
 import sys
@@ -48,11 +49,61 @@ def update_memo_entry_from_obj(data: Dict):
     party_id = int(data['party_id'])
     register_date = datetime.datetime.strptime(data['register_date'], '%Y-%m-%d')
     memo_id = int(data['id'])
+
     query = f"UPDATE memo_entry SET memo_number = {memo_number}, supplier_id={supplier_id}, party_id = {party_id}, register_date='{register_date}' where id={memo_id}"
+    
+    # # Initialize new fields with default values
+    # amount = int(data.get('amount', 0))
+    # gr_amount = int(data.get('gr_amount', 0))
+    # deduction = int(data.get('deduction', 0))
+    # discount = int(data.get('discount', 0))
+    # other_deduction = int(data.get('other_deduction', 0))
+    # rate_difference = int(data.get('rate_difference', 0))
+    
+    # # Process less_details if present
+    # gr_amount_details = json.dumps(data.get('less_details', {}).get('gr_amount', [])) if 'less_details' in data and 'gr_amount' in data['less_details'] else None
+    # discount_details = json.dumps(data.get('less_details', {}).get('discount', [])) if 'less_details' in data and 'discount' in data['less_details'] else None
+    # other_deduction_details = json.dumps(data.get('less_details', {}).get('other_deduction', [])) if 'less_details' in data and 'other_deduction' in data['less_details'] else None
+    # rate_difference_details = json.dumps(data.get('less_details', {}).get('rate_difference', [])) if 'less_details' in data and 'rate_difference' in data['less_details'] else None
+    
+    # # Process notes if present
+    # notes = json.dumps(data.get('notes', [])) if 'notes' in data else None
+    
+    # # Build the query with all fields
+    # query = f"""
+    # UPDATE memo_entry SET 
+    #     memo_number = {memo_number}, 
+    #     supplier_id = {supplier_id}, 
+    #     party_id = {party_id}, 
+    #     register_date = '{register_date}',
+    #     amount = {amount},
+    #     gr_amount = {gr_amount},
+    #     deduction = {deduction},
+    #     discount = {discount},
+    #     other_deduction = {other_deduction},
+    #     rate_difference = {rate_difference}
+    # """
+    
+    # # Add JSON fields if they exist
+    # if gr_amount_details:
+    #     query += f", gr_amount_details = '{gr_amount_details}'"
+    # if discount_details:
+    #     query += f", discount_details = '{discount_details}'"
+    # if other_deduction_details:
+    #     query += f", other_deduction_details = '{other_deduction_details}'"
+    # if rate_difference_details:
+    #     query += f", rate_difference_details = '{rate_difference_details}'"
+    # if notes:
+    #     query += f", notes = '{notes}'"
+    
+    # # Complete the query
+    # query += f" WHERE id = {memo_id}"
+    
     try:
         cursor.execute(query)
-    except:
-        return {'status': 'error', 'message': 'Could not update Memo Entry. Please contact Vaibhav'}
+    except Exception as e:
+        return {'status': 'error', 'message': f'Could not update Memo Entry: {str(e)}. Please contact Vaibhav'}
+    
     db.commit()
     db.close()
     return {'status': 'okay'}

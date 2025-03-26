@@ -12,8 +12,8 @@ from Tests import check_status_and_return_class, cleanup, print_dict_diff
 TEST_SUPPLIER_NAME = 'test_sspli4334'
 TEST_PARTY_NAME = 'test_ppr433'
 TEST_BILL_NUMBER = '123456'
-TEST_MEMO_NUMBER1 = 22776
-TEST_MEMO_NUMBER2 = 37034
+TEST_MEMO_NUMBER1 = 22707
+TEST_MEMO_NUMBER2 = 370315
 TODAY = datetime.now().date()
 BILL_DATE = (TODAY - timedelta(days=180)).strftime('%Y-%m-%d')
 ORDER_FORM_DATE = (TODAY - timedelta(days=182)).strftime('%Y-%m-%d')
@@ -124,7 +124,25 @@ def run_basic_test():
                 print('Difference in Payment List Report')
                 print_dict_diff(og_payment_report, reference)
                 raise
-            part_input = {'memo_number': TEST_MEMO_NUMBER1, 'register_date': MEMO_DATE, 'amount': quarter_pending, 'party_id': test_party_id, 'supplier_id': test_supplier_id, 'payment': [{'bank': 'RTGS', 'id': 1, 'cheque': '234'}], 'mode': 'Part'}
+            part_input = {
+    'memo_number': TEST_MEMO_NUMBER1, 
+    'register_date': MEMO_DATE, 
+    'amount': quarter_pending,
+    'discount': 0,  # No discount for partial payment
+    'other_deduction': 0,  # No other deduction for partial payment
+    'rate_difference': 0,  # No rate difference for partial payment
+    'party_id': test_party_id, 
+    'supplier_id': test_supplier_id, 
+    'payment': [{'bank': 'RTGS', 'id': 1, 'cheque': '234', 'amount': quarter_pending}],  # Add amount to payment
+    'less_details': {
+        'gr_amount': [],
+        'discount': [],
+        'other_deduction': [],
+        'rate_difference': []
+    },
+    'notes': ["Test partial payment memo entry"],
+    'mode': 'Part'
+}
             part_memo = check_status_and_return_class(MemoEntry.insert(part_input, get_cls=True))
             cleanup_list.append(part_memo)
             part_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, TEST_MEMO_NUMBER1)
@@ -148,9 +166,35 @@ def run_basic_test():
                 raise
             gr_amount = 300
             deduction = 300
+            # Split the existing deduction into the three new fields
+            discount = 100
+            rate_difference = 100
+            other_deduction = deduction - discount - rate_difference  # Ensure they sum to the original deduction
             part = quarter_pending
             amount = total_pending_amount - part - deduction - gr_amount
-            full_input = {'memo_number': TEST_MEMO_NUMBER2, 'register_date': MEMO_DATE, 'amount': amount, 'gr_amount': gr_amount, 'deduction': deduction, 'party_id': test_party_id, 'supplier_id': test_supplier_id, 'selected_bills': pending_bills, 'selected_part': [part_memo_id], 'payment': [{'bank': 'RTGS', 'id': 1, 'cheque': '34'}], 'mode': 'Full'}
+            full_input = {
+                'memo_number': TEST_MEMO_NUMBER2, 
+                'register_date': MEMO_DATE, 
+                'amount': amount,
+                'gr_amount': gr_amount, 
+                'deduction': deduction,  # Keep the original deduction value
+                'discount': discount,
+                'other_deduction': other_deduction,
+                'rate_difference': rate_difference,
+                'party_id': test_party_id, 
+                'supplier_id': test_supplier_id, 
+                'selected_bills': pending_bills, 
+                'selected_part': [part_memo_id], 
+                'payment': [{'bank': 'RTGS', 'id': 1, 'cheque': '34', 'amount': amount}],  # Add amount to payment
+                'less_details': {
+                    'gr_amount': ["Note: GR deduction | Amount: " + str(gr_amount)],
+                    'discount': ["Note: Cash discount | Amount: " + str(discount)],
+                    'other_deduction': ["Note: Miscellaneous deduction | Amount: " + str(other_deduction)],
+                    'rate_difference': ["Note: Rate adjustment | Amount: " + str(rate_difference)]
+                },
+                'notes': ["Test full payment memo with all deduction types"],
+                'mode': 'Full'
+            }
             full_memo = check_status_and_return_class(MemoEntry.insert(full_input, get_cls=True))
             cleanup_list.append(full_memo)
             full_memo = MemoEntry.retrieve(test_supplier_id, test_party_id, TEST_MEMO_NUMBER2)
