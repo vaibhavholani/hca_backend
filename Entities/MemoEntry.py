@@ -215,7 +215,14 @@ class MemoEntry(Entry):
                     info['bank_id'] = int(info['id'])
                     del info['id']
                 if 'cheque' in info:
-                    info['cheque_number'] = int(info['cheque'])
+                    cheque_value = info.get('cheque')
+                    if cheque_value is not None and str(cheque_value).strip():
+                        try:
+                            info['cheque_number'] = int(cheque_value)
+                        except (ValueError, TypeError):
+                            info['cheque_number'] = None
+                    else:
+                        info['cheque_number'] = None
                     del info['cheque']
                 # Handle new amount field
                 if 'amount' in info:
@@ -266,4 +273,9 @@ class MemoEntry(Entry):
         if get_cls:
             if get_cls and ret['status'] == 'okay':
                 ret['class'] = memo
+        # Add the memo id to the ret
+        if ret['status'] == 'okay':
+            memo_id = MemoEntry.get_memo_entry_id(memo.supplier_id, memo.party_id, memo.memo_number)
+            ret['id'] = memo_id
+
         return ret
